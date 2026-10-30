@@ -95,7 +95,7 @@ CORS_ORIGINS=https://你的网站域名
 
 ## 资源完整性比对
 
-运行 `python scripts/audit_catalog_completeness.py --focus 持械入宋`，读取红果AI剧、漫剧及其公开题材筛选目录，与暴风AI漫剧逐项核对；重点系列另通过公开搜索补查。报告输出到按日期命名的 `reports/catalog-audit-日期/`，包含可筛选的HTML、逐项CSV、系列缺季CSV及覆盖范围JSON。再次整理当天快照可使用 `--cached-only`；`--cache` 可指定独立采集目录。
+运行 `python scripts/audit_catalog_completeness.py --focus 持械入宋`，读取红果AI剧、漫剧及其公开题材筛选目录，与暴风AI漫剧逐项核对；重点系列另通过公开搜索补查。报告输出到按日期命名的 `reports/catalog-audit-日期/`，包含可筛选的HTML、逐项CSV、系列缺季CSV及覆盖范围JSON。生成报告仅保存在本地，不纳入版本控制。再次整理当天快照可使用 `--cached-only`；`--cache` 可指定独立采集目录。
 
 原始分页缓存保存在忽略的 `.runtime` 中，不包含登录凭据，也不下载视频。报告按剧名、明确季号与标注集数匹配；未标季、疑似同名、版本差异保留为待核验，不自动合并，也不把一个合集地址算成一集。公开网页有展示上限，报告会显示已读取页数和失败项，不能据此声称已覆盖红果App全库或证明所有内容可播放。
 
