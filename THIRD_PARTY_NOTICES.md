@@ -12,6 +12,8 @@ Vue、Vue Router、Element Plus、Anime.js、HLS.js 为 npm 依赖，版本固�
 
 来源项目将网站代码与图片素材分别说明；保留其 LICENSE 不代表将角色图片重新标记为 MIT。参考图及提取结果的权利说明按来源项目说明。影院背景、黄绿色强调色与主体布局未改变。功能图标位于 `frontend/public/whale/icons/`，以同一角色为参考经内置图像工具生成九组动作，涵盖搜索、电影打板、施法、举闪电、使用手机、读卷轴、抱爱心、举时钟和指路。仅作 WebP 尺寸与透明度优化；不改变影院主题色。
 
+挂件菜单与观看记录新增的四张专用动作素材位于 `frontend/public/whale/ui/`，仍以同一大肥鱼参考形象通过内置图像工具制作：钓电影票、举箭头跃起、抱尾收起和坐胶片卷看时钟。前三张仅供挂件菜单对应按钮使用，最后一张专用于观看记录。
+
 ## 圆润字体
 
 寒蝉全圆体 ChillRoundF，来自 [Warren2060/ChillRound](https://github.com/Warren2060/ChillRound)，使用 SIL Open Font License 1.1。原始许可证完整保留于 `frontend/public/fonts/OFL.txt`。字体本地托管，不依赖访客连接外部字体服务。

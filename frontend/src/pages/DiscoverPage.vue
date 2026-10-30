@@ -15,17 +15,17 @@
           <div class="hero-actions"><RouterLink class="primary-button" :to="`/watch/${featured.id}`"><AppIcon name="play" />立即观看</RouterLink><button class="secondary-button" :aria-pressed="savedIds.includes(featured.id)" @click="toggleSaved(featured.id)"><AppIcon :name="savedIds.includes(featured.id) ? 'check' : 'plus'" />{{ savedIds.includes(featured.id) ? '已加入片单' : '加入片单' }}</button></div>
         </div>
         <div class="hero-bottom"><div class="hero-pagination"><button v-for="(item, index) in heroDramas" :key="item.id" :class="{ current: heroIndex === index }" :aria-label="`推荐：${item.title}`" :aria-pressed="heroIndex === index" @click="selectSlide(index)"><span>{{ String(index + 1).padStart(2, '0') }}</span><i></i></button></div><div class="hero-filmstrip"><button v-for="(item, index) in heroDramas" :key="item.id" :class="{ active: heroIndex === index }" :aria-label="`切换至${item.title}`" :aria-pressed="heroIndex === index" @click="selectSlide(index)"><img @error="handleImageError" :src="item.backdrop" :alt="item.title" /><span>{{ item.title }}</span><i></i></button></div><div class="hero-arrows"><button v-if="!reducedMotion" :aria-label="isPaused ? '开启自动轮播' : '暂停自动轮播'" :aria-pressed="isPaused" @click="isPaused = !isPaused"><AppIcon :name="isPaused ? 'play' : 'pause'" /></button><button aria-label="上一个推荐" @click="changeSlide(-1)"><AppIcon name="back" /></button><button aria-label="下一个推荐" @click="changeSlide(1)"><AppIcon name="chevron" /></button></div></div>
-        <div class="hero-caption"><AppIcon name="film" /><span>{{ featured.tags.includes('无对白') ? '无对白' : '原声' }}</span></div>
+        <div class="hero-caption"><UtilityIcon name="film" /><span>{{ featured.tags.includes('无对白') ? '无对白' : '原声' }}</span></div>
       </section>
       <div class="content-wrap">
         <div v-if="!isHome" class="page-heading"><h1>{{ pageTitle }}</h1><button v-if="isHistory && history.length" class="text-button" @click="handleClearHistory">清空记录</button></div>
         <section v-if="isHome || isLibrary" class="category-bar" aria-label="类型筛选"><button v-for="item in categories" :key="item.name" :class="{ selected: selectedCategory === item.name }" :aria-pressed="selectedCategory === item.name" @click="selectCategory(item.name)"><AppIcon :name="item.icon" />{{ item.name }}</button></section>
         <section v-if="isHome && continueWatching.length && selectedCategory === '全部'" class="continue-section">
-          <div class="section-heading"><h2>接着看</h2><RouterLink to="/history">观看记录<AppIcon name="arrow" /></RouterLink></div>
+          <div class="section-heading"><h2>接着看</h2><RouterLink to="/history">观看记录<WatchHistoryIcon /></RouterLink></div>
           <div class="continue-grid"><RouterLink v-for="item in continueWatching" :key="item.id" class="continue-card" :to="`/watch/${item.id}/${item.progress.episode}`"><img @error="handleImageError" :src="item.backdrop" :alt="item.title" /><div><h3>{{ item.title }}</h3><span>第{{ item.progress.episode }}集 · 已看{{ Math.floor(item.progress.time / 60) }}分钟</span><progress :value="item.progress.time" :max="item.progress.duration || item.duration"></progress></div><AppIcon name="play" /></RouterLink></div>
         </section>
         <section class="catalog-section">
-          <div class="section-heading"><div class="heading-group"><h2>{{ isHome ? (selectedCategory === '全部' ? '近期上新' : selectedCategory) : route.query.q ? `“${route.query.q}”` : '全部' }}</h2><span class="count-label">{{ visibleDramas.length }}部</span><span v-if="catalogIndex?.isPrefetching" class="catalog-sync" role="status" aria-label="正在载入完整片库"></span></div><div class="section-tools"><ElSelect :suffix-icon="WhaleCaret" v-if="!isSaved && !isHistory" :model-value="selectedSource" aria-label="选择片源" class="sort-select source-select" :teleported="false" @update:model-value="selectSource"><ElOption label="360资源" value="zy360" /><ElOption label="无尽资源" value="wj" /><ElOption label="非凡资源" value="ff" /></ElSelect><ElSelect :suffix-icon="WhaleCaret" v-if="!isHistory" v-model="sortBy" aria-label="剧集排序" class="sort-select" :teleported="false"><ElOption label="默认排序" value="featured" /><ElOption label="最近更新" value="newest" /></ElSelect><RouterLink v-if="isHome" :to="{ path: '/library', query: { source: selectedSource } }">查看全部<AppIcon name="arrow" /></RouterLink></div></div>
+          <div class="section-heading"><div class="heading-group"><h2>{{ isHome ? (selectedCategory === '全部' ? '近期上新' : selectedCategory) : route.query.q ? `“${route.query.q}”` : '全部' }}</h2><span class="count-label">{{ visibleDramas.length }}部</span><span v-if="catalogIndex?.isPrefetching" class="catalog-sync" role="status" aria-label="正在载入完整片库"></span></div><div class="section-tools"><ElSelect :suffix-icon="SelectCaret" v-if="!isSaved && !isHistory" :model-value="selectedSource" aria-label="选择片源" class="sort-select source-select" :teleported="false" @update:model-value="selectSource"><ElOption label="360资源" value="zy360" /><ElOption label="无尽资源" value="wj" /><ElOption label="非凡资源" value="ff" /></ElSelect><ElSelect :suffix-icon="SelectCaret" v-if="!isHistory" v-model="sortBy" aria-label="剧集排序" class="sort-select" :teleported="false"><ElOption label="默认排序" value="featured" /><ElOption label="最近更新" value="newest" /></ElSelect><RouterLink v-if="isHome" :to="{ path: '/library', query: { source: selectedSource } }">查看全部<UtilityIcon name="arrow" /></RouterLink></div></div>
           <div v-if="visibleDramas.length" class="drama-grid"><DramaCard v-for="drama in displayedDramas" :key="drama.id" :drama="drama" /></div>
           <div v-if="!(isHome && selectedCategory === '全部') && dramas.length" ref="lazySentinel" class="lazy-sentinel" aria-hidden="true"><span v-if="displayedDramas.length < visibleDramas.length || catalogIndex?.isPrefetching" class="catalog-sync"></span></div>
           <div v-if="catalogIndex?.error && dramas.length" class="catalog-error" role="alert"><span>{{ catalogIndex.error }}</span><button @click="loadCatalog(true)">重新连接</button></div>
@@ -49,7 +49,9 @@ import 'element-plus/theme-chalk/el-scrollbar.css';
 import 'element-plus/theme-chalk/el-message-box.css';
 import { animate, createTimeline, stagger } from 'animejs';
 import AppIcon from '../components/AppIcon.vue';
-import WhaleCaret from '../components/WhaleCaret.vue';
+import SelectCaret from '../components/SelectCaret.vue';
+import UtilityIcon from '../components/UtilityIcon.vue';
+import WatchHistoryIcon from '../components/WatchHistoryIcon.vue';
 import { useHeroCarousel } from '../composables/use-hero-carousel';
 import { handleImageError } from '../utils/image-fallback';
 import DramaCard from '../components/DramaCard.vue';
@@ -213,7 +215,7 @@ onBeforeUnmount(() => { catalogRequest += 1; lazyObserver?.disconnect(); entranc
 .hero-arrows button:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .hero-arrows .whale-icon { width: 1.9rem; height: 1.9rem; }
 .hero-caption { position: absolute; right: 4.4%; bottom: 8.2rem; display: flex; align-items: center; gap: .4rem; color: #ffffffb0; font-size: .62rem; }
-.hero-caption .whale-icon { width: 1.6rem; height: 1.6rem; }
+.hero-caption .utility-icon { width: .9rem; height: .9rem; }
 .hero-slide-enter-active, .hero-slide-leave-active { transition: opacity .65s ease, translate .65s ease; }
 .hero-slide-enter-from { opacity: 0; translate: 5% 0; }
 .hero-slide-leave-to { opacity: 0; translate: -5% 0; }
@@ -231,6 +233,7 @@ onBeforeUnmount(() => { catalogRequest += 1; lazyObserver?.disconnect(); entranc
 .section-heading a { display: flex; align-items: center; gap: .5rem; font-size: .7rem; color: var(--muted); white-space: nowrap; }
 .section-heading a:hover { color: var(--accent); }
 .section-heading a .whale-icon { width: 1.8rem; height: 1.8rem; }
+.section-heading a .watch-history-icon { width: 2.2rem; height: 2.2rem; }
 .section-tools { display: flex; align-items: center; gap: 1.8rem; }
 .sort-select { width: 7rem; --el-select-input-font-size: .7rem; }
 .source-select { width: 6.5rem; }
@@ -239,6 +242,7 @@ onBeforeUnmount(() => { catalogRequest += 1; lazyObserver?.disconnect(); entranc
 .catalog-error { display: flex; justify-content: center; gap: 1rem; padding: 1rem; font-size: .75rem; color: var(--muted); }
 .catalog-error button { color: var(--accent); }
 @keyframes catalog-spin { to { transform: rotate(360deg); } }
+.sort-select :deep(.el-select__caret.el-icon) { width: 1.15rem; height: 1.15rem; }
 .sort-select :deep(.el-select__wrapper) { background: transparent; box-shadow: none; padding: .3rem; }
 .sort-select :deep(.el-select-dropdown__item.is-selected) { color: #799c28; }
 .drama-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2rem 1.3rem; }

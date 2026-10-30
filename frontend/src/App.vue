@@ -12,11 +12,11 @@
       <input v-model="keyword" aria-label="搜索剧名或类型" placeholder="搜索剧名、类型" maxlength="80" />
       <kbd>/</kbd>
     </form>
-    <RouterLink class="history-link" to="/history" aria-label="观看记录"><AppIcon name="clock" /><span>观看记录</span></RouterLink>
+    <RouterLink class="history-link" to="/history" aria-label="观看记录"><WatchHistoryIcon /><span class="history-label">观看记录</span></RouterLink>
   </header>
   <main id="main-content"><RouterView /></main>
   <WhaleCompanion />
-  <footer class="site-footer"><RouterLink class="footer-brand" to="/">摸摸鱼</RouterLink><span>© {{ new Date().getFullYear() }} 摸摸鱼</span><button @click="showCredits = true">片源与授权</button><a href="https://github.com/juliangarnier/anime" target="_blank" rel="noreferrer">开源致谢<AppIcon name="arrow" /></a></footer>
+  <footer class="site-footer"><RouterLink class="footer-brand" to="/">摸摸鱼</RouterLink><span>© {{ new Date().getFullYear() }} 摸摸鱼</span><button @click="showCredits = true">片源与授权</button><a href="https://github.com/juliangarnier/anime" target="_blank" rel="noreferrer">开源致谢<UtilityIcon name="external" /></a></footer>
   <ElDialog :close-icon="WhaleClose" v-model="showCredits" title="片源与授权" width="min(38rem, 92vw)" class="credits-dialog">
     <p>漫剧目录接入 360、无尽与非凡的公开采集接口。内容、集数与更新状态以片源返回为准，全集合并版会单独标记。</p>
     <p>播放页保留当前片源及查询链接。第三方目录可访问并不代表已获得内容的发行授权，片源失效时可在目录页切换来源。</p>
@@ -33,6 +33,8 @@ import 'element-plus/theme-chalk/el-dialog.css';
 import 'element-plus/theme-chalk/el-overlay.css';
 import 'element-plus/theme-chalk/el-message.css';
 import AppIcon from './components/AppIcon.vue';
+import UtilityIcon from './components/UtilityIcon.vue';
+import WatchHistoryIcon from './components/WatchHistoryIcon.vue';
 import WhaleCompanion from './components/WhaleCompanion.vue';
 import WhaleClose from './components/WhaleClose.vue';
 
@@ -85,7 +87,7 @@ button, a { transition: color .2s, background .2s, border-color .2s, opacity .2s
 .site-footer { display: flex; align-items: center; gap: 1.8rem; padding: 2.5rem 4.4%; border-top: 1px solid var(--line); margin-top: 3.5rem; color: var(--subtle); font-size: .73rem; }
 .footer-brand { color: var(--muted); font-size: 1.25rem; font-weight: 800; margin-right: auto; }
 .site-footer a:last-child { display: flex; align-items: center; gap: .4rem; }
-.site-footer .whale-icon { width: 1.7rem; height: 1.7rem; }
+.site-footer .utility-icon { width: 1rem; height: 1rem; }
 .site-footer button:hover, .site-footer a:hover { color: var(--accent); }
 .skip-link { position: absolute; top: -5rem; left: 1rem; z-index: 100; background: var(--accent); color: var(--bg); padding: .8rem; }
 .skip-link:focus { top: 1rem; }
@@ -103,11 +105,12 @@ button, a { transition: color .2s, background .2s, border-color .2s, opacity .2s
 .el-select__caret.el-icon { width: 1.6rem; height: 1.6rem; transform: none !important; }
 .el-select__caret .whale-icon { width: 1.6rem; height: 1.6rem; }
 .el-select__caret.is-reverse .whale-icon__symbol { rotate: 180deg; }
+.el-select__caret.is-reverse .utility-icon { rotate: 180deg; }
 .el-dialog__headerbtn { width: 2.6rem; height: 2.6rem; }
 .credits-dialog p { line-height: 1.9; }
 .credits-dialog a { color: var(--accent); display: inline-flex; gap: .5rem; align-items: center; }
 @media (min-width: 1700px) { .site-header, .site-footer { padding-left: max(4.4%, calc((100vw - 1600px) / 2)); padding-right: max(4.4%, calc((100vw - 1600px) / 2)); } }
-@media (max-width: 1000px) { .site-header { gap: 2rem; padding: 0 4%; height: 5.2rem; } .main-nav { gap: 1.5rem; } .search-form { width: 13rem; } .history-link span { display: none; } }
+@media (max-width: 1000px) { .site-header { gap: 2rem; padding: 0 4%; height: 5.2rem; } .main-nav { gap: 1.5rem; } .search-form { width: 13rem; } .history-link .history-label { display: none; } }
 @media (max-width: 700px) { .site-header { height: 7.9rem; flex-wrap: wrap; gap: 0; padding: 1rem 5% .8rem; align-content: space-between; } .brand > span { font-size: 1.4rem; } .brand img { width: 1.7rem; height: 1.7rem; } .main-nav { order: 3; width: 100%; height: 2rem; justify-content: center; gap: 2.5rem; } .main-nav a { font-size: .83rem; gap: .3rem; } .main-nav .whale-icon { width: 1.7rem; height: 1.7rem; } .main-nav a.active::after { bottom: -.5rem; } .search-form { width: 45%; height: 2.2rem; } .search-form kbd { display: none; } .history-link { margin-left: 1rem; } .site-footer { flex-wrap: wrap; gap: 1rem; padding: 1.5rem 5%; } .footer-brand { width: 40%; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 </style>
