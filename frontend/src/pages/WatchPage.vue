@@ -201,7 +201,8 @@ const loadDrama = async () => {
   const version = ++requestVersion;
   destroyPlayer();
   try {
-    const source = /^(zy360|ff|wj)-/.test(id) ? id.split('-')[0] : 'open';
+    if (/^(ff|wj)-/.test(id)) throw new Error('该片源已停用，请返回首页选择暴风或360资源');
+    const source = /^(bf|zy360)-/.test(id) ? id.split('-')[0] : 'open';
     const [detail, list, catalog] = await Promise.all([getDrama(id), getEpisodes(id), getDramas({ source })]);
     if (version !== requestVersion) return;
     drama.value = detail;

@@ -68,4 +68,13 @@ class CatalogApiTest {
         mvc.perform(get("/api/dramas").header("Origin", "https://unapproved.example"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void disabledCatalogSourcesReturnBadRequest() throws Exception {
+        for (String source : new String[] {"wj", "ff"}) {
+            mvc.perform(get("/api/catalog").param("source", source))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("片源不存在"));
+            mvc.perform(get("/api/dramas/{id}", source + "-101")).andExpect(status().isNotFound());
+        }
+    }
 }

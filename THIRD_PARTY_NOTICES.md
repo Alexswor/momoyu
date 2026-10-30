@@ -20,11 +20,10 @@ Vue、Vue Router、Element Plus、Anime.js、HLS.js 为 npm 依赖，版本固�
 
 ## 第三方漫剧目录
 
-用户指定参考非凡、360、无尽采集接口。默认360资源，另支持无尽漫剧分类和非凡适配器。视频与海报从对应公开来源加载，本站不声明拥有其著作权，也没有将其标为开放授权。来源查询链接保留在播放页。当前默认目录与下述开放短片库相互独立。
+当前启用暴风与360采集接口，默认暴风的AI漫剧分类；无尽与非凡接口已停用。视频与海报从对应公开来源加载，本站不声明拥有其著作权，也没有将其标为开放授权。来源查询链接保留在播放页。当前默认目录与下述开放短片库相互独立。
 
 - 360：<https://360zy.com/api.php/provide/vod/>
-- 无尽：<https://api.wujinapi.me/api.php/provide/vod/>
-- 非凡：<https://api.ffzyapi.com/api.php/provide/vod/>；[接入说明](https://ffzy.tv/help/)
+- 暴风：<https://bfzyapi.com/api.php/provide/vod/>；[接入说明](https://bfzy.tv/index.php/help.html)
 
 ## 备用开放短片与封面
 

@@ -18,7 +18,7 @@
   <WhaleCompanion />
   <footer class="site-footer"><RouterLink class="footer-brand" to="/">摸摸鱼</RouterLink><span>© {{ new Date().getFullYear() }} 摸摸鱼</span><button @click="showCredits = true">片源与授权</button><a href="https://github.com/juliangarnier/anime" target="_blank" rel="noreferrer">开源致谢<UtilityIcon name="external" /></a></footer>
   <ElDialog :close-icon="WhaleClose" v-model="showCredits" title="片源与授权" width="min(38rem, 92vw)" class="credits-dialog">
-    <p>漫剧目录接入 360、无尽与非凡的公开采集接口。内容、集数与更新状态以片源返回为准，全集合并版会单独标记。</p>
+    <p>漫剧目录接入暴风与360的公开采集接口。内容、集数与更新状态以片源返回为准，全集合并版会单独标记。</p>
     <p>播放页保留当前片源及查询链接。第三方目录可访问并不代表已获得内容的发行授权，片源失效时可在目录页切换来源。</p>
     <p>开放短片保留其原作者与许可声明。</p>
     <p><a href="https://treapgogo.github.io/deepseek-whale-girl/" target="_blank" rel="noreferrer">鲸鱼娘素材来源<AppIcon name="arrow" /></a></p>

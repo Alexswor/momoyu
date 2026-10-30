@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
+import { normalizeSource } from './constants/catalog-sources';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -13,6 +14,12 @@ const router = createRouter({
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),
+});
+
+router.beforeEach((to) => {
+  if (to.query.source !== undefined && normalizeSource(to.query.source) !== to.query.source) {
+    return { path: to.path, query: { ...to.query, source: normalizeSource(to.query.source) }, hash: to.hash, replace: true };
+  }
 });
 
 createApp(App).use(router).mount('#app');

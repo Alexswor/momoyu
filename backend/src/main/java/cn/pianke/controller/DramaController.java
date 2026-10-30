@@ -45,8 +45,8 @@ public class DramaController {
 
     @GetMapping("/catalog")
     public Result<CatalogPageResponse> catalog(@RequestParam(required = false) @Size(max = 80) String keyword,
-            @RequestParam(defaultValue = "zy360") String source,
-            @RequestParam(defaultValue = "1") @Min(1) @Max(500) int page,
+            @RequestParam(defaultValue = "bf") String source,
+            @RequestParam(defaultValue = "1") @Min(1) @Max(5000) int page,
             @RequestParam(defaultValue = "500") @Min(20) @Max(500) int size) {
         return Result.success(remote.getCatalogPage(keyword, null, "featured", source, page, size));
     }
@@ -55,8 +55,8 @@ public class DramaController {
     public Result<List<DramaResponse>> list(@RequestParam(required = false) @Size(max = 80) String keyword,
             @RequestParam(required = false) @Size(max = 40) String category,
             @RequestParam(defaultValue = "featured") String sort,
-            @RequestParam(defaultValue = "zy360") String source,
-            @RequestParam(defaultValue = "1") @Min(1) @Max(500) int page) {
+            @RequestParam(defaultValue = "bf") String source,
+            @RequestParam(defaultValue = "1") @Min(1) @Max(5000) int page) {
         return Result.success(dramaService.findDramas(keyword, category, sort, source, page));
     }
 

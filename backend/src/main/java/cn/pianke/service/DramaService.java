@@ -35,7 +35,7 @@ public class DramaService {
     }
 
     public List<DramaResponse> findDramas(String keyword, String category, String sort) {
-        return findDramas(keyword, category, sort, "zy360", 1);
+        return findDramas(keyword, category, sort, "bf", 1);
     }
 
     public List<DramaResponse> findDramas(String keyword, String category, String sort, String source, int page) {

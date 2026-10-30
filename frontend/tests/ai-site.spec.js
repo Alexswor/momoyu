@@ -36,13 +36,14 @@ test('实时漫剧目录、搜索、分页和片单持久化', async ({ page, re
   expect(errors).toEqual([]);
 });
 
-test('真实HLS全集播放、拖动、倍速、断点续播和观看记录', async ({ page }) => {
-  await page.goto('/watch/zy360-108805');
+test('暴风真实HLS全集播放、拖动、倍速、断点续播和观看记录', async ({ page, request }) => {
+  const drama = (await (await request.get('/api/dramas/bf-170347')).json()).data;
+  await page.goto('/watch/bf-170347');
   const video = page.locator('video');
   await expect(video).toBeVisible();
   await page.waitForFunction(() => document.querySelector('video')?.readyState >= 2, null, { timeout: 45000 });
-  expect(await video.evaluate((element) => element.duration)).toBeGreaterThan(3600);
-  await expect(page.getByText('全集版 · 60集', { exact: true })).toBeVisible();
+  expect(await video.evaluate((element) => element.duration)).toBeGreaterThan(7200);
+  await expect(page.getByText(`全集版 · ${drama.originalEpisodeCount}集`, { exact: true })).toBeVisible();
   await video.evaluate(async (element) => { element.muted = true; await element.play(); });
   await expect.poll(() => video.evaluate((element) => element.currentTime), { timeout: 20000 }).toBeGreaterThan(2);
   await video.evaluate((element) => { element.currentTime = 45; });
@@ -53,7 +54,7 @@ test('真实HLS全集播放、拖动、倍速、断点续播和观看记录', as
   await video.evaluate((element) => element.pause());
   await page.getByRole('link', { name: '观看记录', exact: true }).click();
   await expect(page.locator('.drama-card')).toHaveCount(1);
-  await page.getByRole('link', { name: '播放跃龙门-镇山河', exact: true }).click();
+  await page.getByRole('link', { name: `播放${drama.title}`, exact: true }).click();
   await page.waitForFunction(() => document.querySelector('video')?.readyState >= 2 && document.querySelector('video').currentTime > 40, null, { timeout: 45000 });
   await expect(page.getByRole('button', { name: '下一集', exact: true })).toBeDisabled();
 });
@@ -75,14 +76,7 @@ test('手机布局、字体和竖屏观看', async ({ page }) => {
   await page.screenshot({ path: '../.runtime/ai-watch-mobile.png', fullPage: true });
 });
 
-test('片源故障时可重试并切换来源', async ({ page }) => {
-  await page.goto('/?source=ff');
-  await expect(page.locator('.status-panel, .drama-card, .empty-state').first()).toBeVisible({ timeout: 25000 });
-  if (await page.getByRole('alert').count()) {
-    await expect(page.getByRole('button', { name: '切换360资源' })).toBeVisible();
-    await page.getByRole('button', { name: '切换360资源' }).click();
-    await expect(page.locator('.drama-card')).toHaveCount(6);
-  }
+test('播放请求故障时可重试', async ({ page }) => {
   await page.route('**/api/dramas/zy360-108805/episodes/1/play', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ code: 503, message: '片源暂时不可用', data: null }) }));
   await page.goto('/watch/zy360-108805');
   await expect(page.getByRole('alert')).toContainText('片源暂时不可用');
@@ -91,7 +85,7 @@ test('片源故障时可重试并切换来源', async ({ page }) => {
 
 test('封面通过本站缓存加载，保留影院配色并显示鲸鱼娘', async ({ page, request }) => {
   await page.route('**://www.imgzy360.com:7788/**', (route) => route.abort());
-  const response = await request.get('/api/dramas/zy360-108805/poster');
+  const response = await request.get('/api/dramas/bf-170347/poster');
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toContain('image/');
   expect(response.headers()['cache-control']).toContain('max-age=3600');
@@ -109,13 +103,17 @@ test('封面通过本站缓存加载，保留影院配色并显示鲸鱼娘', as
 });
 
 test('片库元数据自动完整载入，图片与卡片保持懒加载', async ({ page }) => {
+  // 暴风接口每页最多100条，完整目录约161页，保留两路并发以限制上游请求压力。
+  test.setTimeout(420000);
   await page.goto('/library');
   await expect.poll(() => page.locator('.drama-card').count()).toBeGreaterThanOrEqual(24);
-  await expect(page.getByRole('status', { name: '正在载入完整片库' })).toHaveCount(0, { timeout: 110000 });
+  await expect(page.getByRole('status', { name: '正在载入完整片库' })).toHaveCount(0, { timeout: 390000 });
   await expect(page.locator('.catalog-error')).toHaveCount(0);
   const total = Number((await page.locator('.count-label').innerText()).replace(/\D/g, ''));
-  expect(total).toBeGreaterThan(4000);
+  expect(total).toBeGreaterThan(16000);
   const rendered = await page.locator('.drama-card').count();
   expect(rendered).toBeLessThan(total);
   await expect(page.getByRole('button', { name: '加载更多' })).toHaveCount(0);
+  await test.info().attach('catalog-summary', { body: JSON.stringify({ total, rendered }), contentType: 'application/json' });
+  await page.screenshot({ path: '../.runtime/baofeng-complete-library.png' });
 });

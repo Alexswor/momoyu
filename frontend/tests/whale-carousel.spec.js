@@ -56,7 +56,8 @@ test('功能使用不同动作的大肥鱼图标，站名没有绿点，手机�
   await page.waitForFunction(() => Array.from(document.querySelectorAll('.whale-icon__figure')).every((image) => image.complete && image.naturalWidth > 0));
   await expect(page.locator('.search-form .whale-icon__figure')).toHaveAttribute('src', '/whale/icons/search.webp');
   await page.locator('.source-select').click();
-  await expect(page.getByRole('option', { name: '无尽资源' })).toBeVisible();
+  await expect(page.getByRole('option', { name: '暴风资源' })).toBeVisible();
+  await expect(page.getByRole('option', { name: '360资源' })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();

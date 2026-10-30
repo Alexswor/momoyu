@@ -7,13 +7,12 @@ import urllib.request
 
 SOURCES = {
     '360资源': 'https://360zy.com/api.php/provide/vod/?ac=detail&wd=AI',
-    '无尽资源': 'https://api.wujinapi.me/api.php/provide/vod/?ac=detail&t=63',
-    '非凡资源': 'https://api.ffzyapi.com/api.php/provide/vod/?ac=detail&wd=AI',
+    '暴风资源': 'https://bfzyapi.com/api.php/provide/vod/?ac=detail&t=68',
 }
 
 
 def read(url, limit=2_000_000, media=False):
-    headers = {'User-Agent': 'Pianke/1.0'}
+    headers = {'User-Agent': 'Mozilla/5.0'}
     if media:
         headers['Range'] = 'bytes=0-2047'
     with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20) as response:

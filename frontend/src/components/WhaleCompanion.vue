@@ -10,6 +10,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus/es/components/message/index';
 import WhaleMenuIcon from './WhaleMenuIcon.vue';
 import { getDramas } from '../api/dramas';
+import { normalizeSource } from '../constants/catalog-sources';
 const route = useRoute();
 const router = useRouter();
 const isVisible = ref(true);
@@ -19,7 +20,7 @@ const backToTop = () => { window.scrollTo({ top: 0, behavior: window.matchMedia(
 const chooseDrama = async () => {
   isChoosing.value = true;
   try {
-    const dramas = await getDramas({ source: String(route.query.source || 'zy360') });
+    const dramas = await getDramas({ source: normalizeSource(route.query.source) });
     if (!dramas.length) { ElMessage.info('暂时没有可选漫剧'); return; }
     const drama = dramas[Math.floor(Math.random() * dramas.length)];
     isOpen.value = false;

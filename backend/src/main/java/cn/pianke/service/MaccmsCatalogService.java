@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -30,26 +31,32 @@ import java.util.regex.Pattern;
 @Service
 public class MaccmsCatalogService {
     private static final Map<String, Provider> PROVIDERS = Map.of(
-            "zy360", new Provider("360资源", "https://360zy.com/api.php/provide/vod/"),
-            "ff", new Provider("非凡资源", "https://api.ffzyapi.com/api.php/provide/vod/"),
-            "wj", new Provider("无尽资源", "https://api.wujinapi.me/api.php/provide/vod/"));
+            "bf", new Provider("暴风资源", "https://bfzyapi.com/api.php/provide/vod/", 68, "",
+                    List.of("bfvp26.com")),
+            "zy360", new Provider("360资源", "https://360zy.com/api.php/provide/vod/", 0, "AI",
+                    List.of("imgzy360.com", "youkupic.com")));
     private static final Pattern AI_MARKER = Pattern.compile("(?i)(?:^|\\s|【|\\[)AI(?:\\s|漫剧|版|$)");
     private static final Pattern EPISODE_COUNT = Pattern.compile("全?(\\d+)集");
-    private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8))
-            .followRedirects(HttpClient.Redirect.NORMAL).build();
+    private final HttpClient client;
     private final ObjectMapper json;
     private final Map<String, Cached> cache = new ConcurrentHashMap<>();
     private final Map<String, Cached> details = new ConcurrentHashMap<>();
     private final Map<String, PosterCache> posters = new ConcurrentHashMap<>();
 
-    public MaccmsCatalogService(ObjectMapper json) { this.json = json; }
+    @Autowired
+    public MaccmsCatalogService(ObjectMapper json) {
+        this(json, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8))
+                .followRedirects(HttpClient.Redirect.NORMAL).build());
+    }
 
-    private record Provider(String name, String api) {}
+    MaccmsCatalogService(ObjectMapper json, HttpClient client) { this.json = json; this.client = client; }
+
+    private record Provider(String name, String api, int categoryId, String defaultKeyword, List<String> imageHosts) {}
     private record Cached(JsonNode value, long expiresAt) {}
     private record RemoteEpisode(String title, String url) {}
     private record PosterCache(PosterResponse response, long expiresAt) {}
 
-    public boolean isRemoteId(String id) { return id != null && id.matches("(zy360|ff|wj)-[0-9]+"); }
+    public boolean isRemoteId(String id) { return id != null && id.matches("(bf|zy360)-[0-9]+"); }
 
     public List<DramaResponse> findDramas(String keyword, String category, String sort, String source, int page) {
         return getCatalogPage(keyword, category, sort, source, page, 20).items();
@@ -60,10 +67,9 @@ public class MaccmsCatalogService {
         if (!List.of("featured", "newest", "duration").contains(sort)) {
             throw new BizException(HttpStatus.BAD_REQUEST, "排序方式不正确");
         }
-        String search = keyword == null || keyword.isBlank()
-                ? ("wj".equals(source) ? "" : "ff".equals(source) ? "漫剧" : "AI") : keyword.trim();
+        String search = keyword == null || keyword.isBlank() ? provider.defaultKeyword() : keyword.trim();
         String query = "?ac=detail&pg=" + page + "&pagesize=" + size + "&limit=" + size
-                + ("wj".equals(source) ? "&t=63" : "")
+                + (provider.categoryId() > 0 ? "&t=" + provider.categoryId() : "")
                 + (search.isBlank() ? "" : "&wd=" + URLEncoder.encode(search, StandardCharsets.UTF_8));
         JsonNode data = fetch(provider.api() + query, provider.name());
         List<DramaResponse> result = new ArrayList<>();
@@ -106,18 +112,18 @@ public class MaccmsCatalogService {
         PosterCache cached = posters.get(id);
         if (cached != null && cached.expiresAt() > System.currentTimeMillis()) return cached.response();
         String picture = text(getRawDetail(id), "vod_pic");
+        Provider provider = requireProvider(id.split("-", 2)[0]);
         try {
             URI uri = URI.create(picture);
             String host = uri.getHost();
             // Only provider-owned image hosts are accepted. The caller can pass an ID, never a URL.
-            boolean isAllowed = host != null && (host.equals("imgzy360.com") || host.endsWith(".imgzy360.com")
-                    || host.equals("youkupic.com") || host.endsWith(".youkupic.com")
-                    || host.equals("ffzyimg.com") || host.endsWith(".ffzyimg.com"));
+            boolean isAllowed = host != null && provider.imageHosts().stream()
+                    .anyMatch(domain -> host.equals(domain) || host.endsWith("." + domain));
             if (!isAllowed || !List.of("https", "http").contains(uri.getScheme())) {
                 throw new BizException(HttpStatus.BAD_GATEWAY, "封面地址不可用");
             }
             HttpRequest request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(15))
-                    .header("User-Agent", "Mozilla/5.0").header("Referer", requireProvider(id.split("-", 2)[0]).api())
+                    .header("User-Agent", "Mozilla/5.0").header("Referer", provider.api())
                     .GET().build();
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
             try (InputStream input = response.body()) {
@@ -157,7 +163,7 @@ public class MaccmsCatalogService {
         if (cached != null && cached.expiresAt() > System.currentTimeMillis()) return cached.value();
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(18))
-                    .header("User-Agent", "Pianke/1.0").header("Accept", "application/json").GET().build();
+                    .header("User-Agent", "Mozilla/5.0").header("Accept", "application/json").GET().build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() != 200) {
                 throw new BizException(HttpStatus.BAD_GATEWAY, sourceName + "暂不可用，请切换片源");
@@ -180,13 +186,14 @@ public class MaccmsCatalogService {
 
     private DramaResponse convert(String id, JsonNode item, Provider provider) {
         String rawTitle = text(item, "vod_name");
-        String title = rawTitle.replaceAll("(?i)\\s*(AI\\s*漫剧(?:版)?|AI|漫剧)\\s*$", "").trim();
+        String title = rawTitle.replaceAll("(?i)\\s*(AI\\s*(?:漫剧|短剧)(?:版)?|AI|漫剧)\\s*$", "").trim();
         String category = classify(title);
         String status = text(item, "vod_remarks");
         List<RemoteEpisode> episodes = parseEpisodes(item);
         boolean compilation = episodes.size() == 1 && (status.contains("全集") || episodes.get(0).title().contains("全集"));
         var countMatcher = EPISODE_COUNT.matcher(status);
-        int originalCount = countMatcher.find() ? Integer.parseInt(countMatcher.group(1)) : compilation ? 0 : episodes.size();
+        int originalCount = countMatcher.find() ? Integer.parseInt(countMatcher.group(1))
+                : compilation ? item.path("vod_total").asInt(0) : episodes.size();
         List<String> tags = new ArrayList<>();
         tags.add("漫剧");
         if (!"漫剧".equals(category)) tags.add(category);
