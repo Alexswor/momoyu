@@ -1,0 +1,12 @@
+node_modules/
+dist/
+target/
+.runtime/
+.env
+.env.*
+!.env.example
+application-local.yml
+data/
+*.log
+.idea/
+.DS_Store

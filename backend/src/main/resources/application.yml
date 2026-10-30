@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: pianke-api
+  profiles:
+    default: local
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+mybatis-plus:
+  global-config:
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+logging:
+  level:
+    cn.pianke: INFO
