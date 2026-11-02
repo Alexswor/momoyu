@@ -12,7 +12,7 @@
           <h1 :key="featured.id" :aria-label="featured.title"><span v-for="(character, index) in featured.title" :key="index" class="hero-character" aria-hidden="true">{{ character }}</span></h1>
           <div class="hero-meta"><span v-if="featured.year">{{ featured.year }}</span><i></i><span>{{ featured.category }}</span><i></i><span>{{ featured.originalEpisodeCount > 1 ? `全${featured.originalEpisodeCount}集` : featured.status }}</span><span class="hero-quality">{{ featured.compilation ? '合集' : '高清' }}</span></div>
           <div class="hero-tags"><span v-for="tag in featured.tags" :key="tag">{{ tag }}</span></div>
-          <div class="hero-actions"><RouterLink class="primary-button" :to="`/watch/${featured.id}`"><AppIcon name="play" />立即观看</RouterLink><button class="secondary-button" :aria-pressed="savedIds.includes(featured.id)" @click="toggleSaved(featured.id)"><AppIcon :name="savedIds.includes(featured.id) ? 'check' : 'plus'" />{{ savedIds.includes(featured.id) ? '已加入片单' : '加入片单' }}</button></div>
+          <div class="hero-actions"><RouterLink class="primary-button compact-action" :to="`/watch/${featured.id}`"><AppIcon name="play" />立即观看</RouterLink><button class="secondary-button compact-action" :aria-pressed="savedIds.includes(featured.id)" @click="toggleSaved(featured.id)"><AppIcon :name="savedIds.includes(featured.id) ? 'check' : 'plus'" />{{ savedIds.includes(featured.id) ? '已加入片单' : '加入片单' }}</button></div>
         </div>
         <div class="hero-bottom"><div class="hero-pagination"><button v-for="(item, index) in heroDramas" :key="item.id" :class="{ current: heroIndex === index }" :aria-label="`推荐：${item.title}`" :aria-pressed="heroIndex === index" @click="selectSlide(index)"><span>{{ String(index + 1).padStart(2, '0') }}</span><i></i></button></div><div class="hero-filmstrip"><button v-for="(item, index) in heroDramas" :key="item.id" :class="{ active: heroIndex === index }" :aria-label="`切换至${item.title}`" :aria-pressed="heroIndex === index" @click="selectSlide(index)"><img @error="handleImageError" :src="item.backdrop" :alt="item.title" /><span>{{ item.title }}</span><i></i></button></div><div class="hero-arrows"><button v-if="!reducedMotion" :aria-label="isPaused ? '开启自动轮播' : '暂停自动轮播'" :aria-pressed="isPaused" @click="isPaused = !isPaused"><AppIcon :name="isPaused ? 'play' : 'pause'" /></button><button aria-label="上一个推荐" @click="changeSlide(-1)"><AppIcon name="back" /></button><button aria-label="下一个推荐" @click="changeSlide(1)"><AppIcon name="chevron" /></button></div></div>
         <div class="hero-caption"><UtilityIcon name="film" /><span>{{ featured.tags.includes('无对白') ? '无对白' : '原声' }}</span></div>
@@ -31,7 +31,7 @@
           <div v-if="catalogIndex?.error && dramas.length" class="catalog-error" role="alert"><span>{{ catalogIndex.error }}</span><button @click="loadCatalog(true)">重新连接</button></div>
           <div v-if="!visibleDramas.length" class="empty-state"><img class="empty-whale" src="/whale/dafeiyu-chibi.png" alt="鲸鱼娘" /><h3>{{ isSaved ? '片单还空着' : isHistory ? '还没有观看记录' : '没有找到相关作品' }}</h3><RouterLink v-if="isSaved || isHistory" class="secondary-button" to="/">去发现</RouterLink><button v-else class="secondary-button" @click="resetFilters">查看全部</button></div>
         </section>
-        <section v-if="isHome && selectedCategory === '全部' && spotlightDramas.length" class="spotlight-section"><div class="section-heading"><h2>全集放映</h2><RouterLink :to="{ path: '/library', query: { source: selectedSource } }">更多漫剧<AppIcon name="arrow" /></RouterLink></div><div class="spotlight-grid"><RouterLink v-for="drama in spotlightDramas" :key="drama.id" class="spotlight-card" :to="`/watch/${drama.id}`" :aria-label="`立即观看${drama.title}`"><img @error="handleImageError" :src="drama.backdrop" :alt="drama.title" loading="lazy" /><div class="spotlight-shade"></div><div class="spotlight-content"><span>{{ drama.category }}<i></i>{{ drama.originalEpisodeCount > 1 ? `全${drama.originalEpisodeCount}集` : drama.status }}</span><h3>{{ drama.title }}</h3></div><span class="spotlight-play primary-button"><AppIcon name="play" />立即观看</span></RouterLink></div></section>
+        <section v-if="isHome && selectedCategory === '全部' && spotlightDramas.length" class="spotlight-section"><div class="section-heading"><h2>全集放映</h2><RouterLink :to="{ path: '/library', query: { source: selectedSource } }">更多漫剧<AppIcon name="arrow" /></RouterLink></div><div class="spotlight-grid"><RouterLink v-for="drama in spotlightDramas" :key="drama.id" class="spotlight-card" :to="`/watch/${drama.id}`" :aria-label="`立即观看${drama.title}`"><img @error="handleImageError" :src="drama.backdrop" :alt="drama.title" loading="lazy" /><div class="spotlight-shade"></div><div class="spotlight-content"><span>{{ drama.category }}<i></i>{{ drama.originalEpisodeCount > 1 ? `全${drama.originalEpisodeCount}集` : drama.status }}</span><h3>{{ drama.title }}</h3></div><span class="spotlight-play primary-button watch-now-button"><AppIcon name="play" />立即观看</span></RouterLink></div></section>
       </div>
     </template>
   </div>
@@ -195,7 +195,7 @@ onBeforeUnmount(() => { catalogRequest += 1; lazyObserver?.disconnect(); entranc
 .hero-tags { display: flex; gap: .5rem; margin-top: 1rem; }
 .hero-tags span { font-size: .66rem; color: var(--muted); }
 .hero-tags span + span::before { content: '/'; margin-right: .5rem; color: #ffffff22; }
-.hero-actions { display: flex; gap: .8rem; margin-top: 2.25rem; }
+.hero-actions { display: inline-grid; grid-template-columns: repeat(2, 1fr); gap: .8rem; margin-top: 2.25rem; }
 .hero-bottom { position: absolute; bottom: 2rem; left: 4.4%; right: 4.4%; display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; }
 .hero-filmstrip { margin-left: auto; display: flex; gap: .65rem; }
 .hero-filmstrip button { position: relative; width: 7.4rem; height: 4.7rem; border-radius: .35rem; border: 1px solid #ffffff30; padding: 0; overflow: hidden; opacity: .55; }
@@ -264,6 +264,9 @@ onBeforeUnmount(() => { catalogRequest += 1; lazyObserver?.disconnect(); entranc
 .spotlight-content > span { display: flex; align-items: center; gap: .6rem; font-size: .68rem; color: #d7dacc; }
 .spotlight-content i { width: 2px; height: 2px; border-radius: 50%; background: currentColor; }
 .spotlight-content h3 { font-family: inherit; font-weight: 500; font-size: 1.5rem; margin: .8rem 0 0; letter-spacing: .04em; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.compact-action, .watch-now-button { align-self: center; min-height: 2.4rem; padding: .35rem 1rem; gap: .4rem; font-size: .75rem; white-space: nowrap; box-shadow: none; }
+.compact-action .whale-icon, .watch-now-button .whale-icon { width: 1.5rem; height: 1.5rem; }
+.compact-action :deep(.whale-icon__symbol), .watch-now-button :deep(.whale-icon__symbol) { width: .7rem; height: .7rem; padding: .06rem; }
 .spotlight-play { position: absolute; right: 1.8rem; bottom: 1.8rem; }
 .continue-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .continue-card { display: flex; align-items: center; gap: 1rem; padding: .65rem; border: 1px solid var(--line); border-radius: var(--radius); background: #ffffff03; }
@@ -293,6 +296,8 @@ onBeforeUnmount(() => { catalogRequest += 1; lazyObserver?.disconnect(); entranc
   .hero-actions { margin-top: 1.1rem; gap: .6rem; }
   .primary-button, .secondary-button { font-size: .7rem; padding: .6rem .9rem; min-height: 2.6rem; gap: .4rem; }
   .primary-button .whale-icon, .secondary-button .whale-icon { width: 1.65rem; height: 1.65rem; }
+  .compact-action, .watch-now-button { min-height: 2.1rem; padding: .25rem .85rem; gap: .35rem; font-size: .68rem; }
+  .compact-action .whale-icon, .watch-now-button .whale-icon { width: 1.35rem; height: 1.35rem; }
   .hero-bottom { bottom: .7rem; left: 4%; right: 4%; gap: .6rem; }
   .hero-caption, .hero-filmstrip { display: none; }
   .hero-pagination { gap: .5rem; }

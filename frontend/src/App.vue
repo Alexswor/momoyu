@@ -93,7 +93,7 @@ button, a { transition: color .2s, background .2s, border-color .2s, opacity .2s
 .search-form kbd { font-size: .75rem; color: var(--subtle); border: 1px solid var(--line); padding: .04rem .3rem; border-radius: .2rem; }
 .history-link { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--muted); margin-left: -.8rem; white-space: nowrap; }
 .history-link:hover { color: var(--accent); }
-.site-footer { display: flex; align-items: center; gap: 1.8rem; padding: 2.5rem 4.4%; border-top: 1px solid var(--line); margin-top: 3.5rem; color: var(--subtle); font-size: .73rem; }
+.site-footer { display: flex; align-items: center; gap: 1.8rem; padding: 1.5rem 4.4%; border-top: 1px solid var(--line); margin-top: 1.25rem; color: var(--subtle); font-size: .73rem; }
 .footer-brand { color: var(--muted); font-size: 1.25rem; font-weight: 800; margin-right: auto; }
 .site-footer a:last-child { display: flex; align-items: center; gap: .4rem; }
 .site-footer .utility-icon { width: 1rem; height: 1rem; }

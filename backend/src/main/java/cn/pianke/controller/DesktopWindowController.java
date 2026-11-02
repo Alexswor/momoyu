@@ -34,5 +34,9 @@ public class DesktopWindowController {
         guard(caller); windows.playbackStatus(token, status); return Result.success(Map.of());
     }
     public record Open(String path) {}
+    @PostMapping("/windows/{token}/visibility") public Result<?> visibility(@PathVariable String token, @RequestBody Visibility visibility, HttpServletRequest caller) {
+        guard(caller); return Result.success(windows.visibility(token, visibility.hidden()));
+    }
+    public record Visibility(boolean hidden) {}
     public record Settings(int opacity, boolean topmost, boolean clickThrough, boolean autoHide) {}
 }

@@ -3,6 +3,8 @@ package cn.pianke.service;
 import cn.pianke.exception.BizException;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.WString;
+import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.POINT;
@@ -35,7 +37,7 @@ public class DesktopWindowService {
         Thread t = new Thread(r, "momoyu-window-scan"); t.setDaemon(true); return t;
     });
     private volatile Thread hotkeys;
-    private volatile String restoreKey = "";
+    private volatile String toggleKey = "";
     private volatile boolean started;
     private static final int EXSTYLE = -20, LAYERED = 0x80000, TRANSPARENT = 0x20;
     private static final Set<String> QUERY_KEYS = Set.of("source", "q", "category", "sort", "popup", "t", "rate", "paused");
@@ -123,8 +125,9 @@ public class DesktopWindowService {
     private Map<String, Object> snapshot(Window w) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("token", w.token); result.put("ready", w.handle != null); result.put("closed", w.closed);
+        result.put("identityReady", w.handle != null);
         result.put("opacity", w.opacity); result.put("topmost", w.topmost); result.put("clickThrough", w.clickThrough);
-        result.put("autoHide", w.autoHide); result.put("restoreKey", restoreKey); result.put("error", w.error);
+        result.put("autoHide", w.autoHide); result.put("toggleKey", toggleKey); result.put("hidden", w.hidden); result.put("error", w.error);
         result.put("progress", w.progress);
         result.put("playbackStatus", w.playbackStatus);
         if (w.handle != null && !w.closed && User32.INSTANCE.IsWindow(w.handle)) {
@@ -135,6 +138,10 @@ public class DesktopWindowService {
             result.put("appliedTopmost", (styles & 8) != 0);
             result.put("appliedClickThrough", (styles & TRANSPARENT) != 0);
             result.put("visible", User32.INSTANCE.IsWindowVisible(w.handle));
+            char[] title = new char[256];
+            User32.INSTANCE.GetWindowText(w.handle, title, title.length);
+            result.put("title", Native.toString(title));
+            result.put("resizable", (User32.INSTANCE.GetWindowLong(w.handle, -16) & 0x40000) != 0);
         }
         return result;
     }
@@ -142,12 +149,12 @@ public class DesktopWindowService {
     public Map<String, Object> update(String token, int opacity, boolean topmost, boolean clickThrough, boolean autoHide) {
         Window w = find(token);
         if (opacity < 20 || opacity > 100) throw new BizException(HttpStatus.BAD_REQUEST, "不透明度范围为20%至100%");
-        if ((clickThrough || autoHide) && restoreKey.isEmpty()) throw new BizException(HttpStatus.CONFLICT, "恢复快捷键被占用，暂不能开启穿透或移入隐藏");
+        if ((clickThrough || autoHide) && toggleKey.isEmpty()) throw new BizException(HttpStatus.CONFLICT, "隐藏快捷键被占用，暂不能开启穿透或移入隐藏");
         synchronized (w) {
             if (w.closed || w.handle == null) throw new BizException(HttpStatus.CONFLICT, "小窗尚未就绪");
             apply(w, opacity, topmost, clickThrough);
             w.opacity = opacity; w.topmost = topmost; w.clickThrough = clickThrough; w.autoHide = autoHide;
-            if (!autoHide) User32.INSTANCE.ShowWindow(w.handle, 4);
+            if (!autoHide && !w.hidden) User32.INSTANCE.ShowWindow(w.handle, 4);
             return state(w);
         }
     }
@@ -168,7 +175,10 @@ public class DesktopWindowService {
         Window w = find(token);
         synchronized (w) {
             if (w.handle != null && User32.INSTANCE.IsWindow(w.handle)) {
-                try { restore(w); } finally { User32.INSTANCE.PostMessage(w.handle, 0x10, null, null); }
+                try { restore(w); } finally {
+                    WindowProperties.INSTANCE.RemovePropW(w.handle, identity(w));
+                    User32.INSTANCE.PostMessage(w.handle, 0x10, null, null);
+                }
             }
             w.closed = true;
             try { Files.deleteIfExists(records.resolve(token + ".window")); } catch (java.io.IOException e) { LOG.debug("小窗记录清理失败", e); }
@@ -188,8 +198,34 @@ public class DesktopWindowService {
     }
     private void restore(Window w) {
         apply(w, 100, false, false);
-        w.opacity = 100; w.topmost = false; w.clickThrough = false; w.autoHide = false;
+        w.opacity = 100; w.topmost = false; w.clickThrough = false; w.autoHide = false; w.hidden = false;
         User32.INSTANCE.ShowWindow(w.handle, 4);
+    }
+    public Map<String, Object> visibility(String token, boolean hidden) {
+        Window w = find(token);
+        synchronized (w) {
+            if (hidden && toggleKey.isEmpty()) throw new BizException(HttpStatus.CONFLICT, "隐藏快捷键被占用，暂不能隐藏小窗");
+            if (w.closed || w.handle == null) throw new BizException(HttpStatus.CONFLICT, "小窗尚未就绪");
+            setHidden(w, hidden);
+            return state(w);
+        }
+    }
+    private void setHidden(Window w, boolean hidden) {
+        w.hidden = hidden;
+        User32.INSTANCE.ShowWindow(w.handle, hidden ? 0 : 4);
+        if (!hidden) User32.INSTANCE.SetForegroundWindow(w.handle);
+    }
+    private WString identity(Window w) { return new WString("Momoyu." + w.token); }
+    private void prepareWindow(Window w) {
+        User32 u = User32.INSTANCE;
+        if (!WindowProperties.INSTANCE.SetPropW(w.handle, identity(w), Pointer.createConstant(1L)))
+            throw new BizException(HttpStatus.SERVICE_UNAVAILABLE, "未能绑定小窗标识");
+        int style = u.GetWindowLong(w.handle, -16);
+        if ((style & 0x70000) != 0x70000) {
+            u.SetWindowLong(w.handle, -16, style | 0x70000);
+            u.SetWindowPos(w.handle, null, 0, 0, 0, 0, 0x37);
+        }
+        apply(w, w.opacity, w.topmost, false);
     }
     private void scan() {
         for (Window w : windows.values()) synchronized (w) {
@@ -200,15 +236,18 @@ public class DesktopWindowService {
                     u.EnumWindows((handle, data) -> {
                         char[] title = new char[256], type = new char[128];
                         u.GetWindowText(handle, title, title.length); u.GetClassName(handle, type, type.length);
-                        if (Native.toString(title).contains("[摸摸鱼-" + w.token + "]") && Native.toString(type).equals("Chrome_WidgetWin_1")) {
+                        boolean owned = Native.toString(title).contains("[摸摸鱼-" + w.token + "]")
+                                || WindowProperties.INSTANCE.GetPropW(handle, identity(w)) != null;
+                        if (owned && Native.toString(type).equals("Chrome_WidgetWin_1")) {
                             w.handle = handle; return false;
                         }
                         return true;
                     }, null);
-                    if (w.handle != null) apply(w, w.opacity, w.topmost, false);
+                    if (w.handle != null) prepareWindow(w);
                     else if (System.currentTimeMillis() - w.created > 30_000) { w.error = "未能连接小窗，请关闭后重新打开"; w.closed = true; }
                 } else if (!u.IsWindow(w.handle)) w.closed = true;
                 else {
+                    if (w.hidden) { if (u.IsWindowVisible(w.handle)) u.ShowWindow(w.handle, 0); continue; }
                     if (((u.GetWindowLong(w.handle, EXSTYLE) & 8) != 0) != w.topmost) apply(w, w.opacity, w.topmost, w.clickThrough);
                     if (!w.autoHide) continue;
                     POINT point = new POINT(); RECT rect = new RECT();
@@ -228,19 +267,20 @@ public class DesktopWindowService {
             User32 u = User32.INSTANCE; MSG msg = new MSG();
             u.PeekMessage(msg, null, 0, 0, 0);
             int modifiers = 0x4001;
-            if (u.RegisterHotKey(null, 0x4d59, modifiers, 0x42)) restoreKey = "Alt+B";
-            else if (u.RegisterHotKey(null, 0x4d59, 0x4003, 0x42)) restoreKey = "Ctrl+Alt+B";
+            if (u.RegisterHotKey(null, 0x4d59, modifiers, 0x5a)) toggleKey = "Alt+Z";
+            else if (u.RegisterHotKey(null, 0x4d59, 0x4003, 0x5a)) toggleKey = "Ctrl+Alt+Z";
             try {
                 while (!Thread.currentThread().isInterrupted()) {
                     while (u.PeekMessage(msg, null, 0, 0, 1)) if (msg.message == 0x312) {
+                        boolean hide = windows.values().stream().anyMatch(w -> !w.closed && w.handle != null && !w.hidden);
                         for (Window w : windows.values()) synchronized (w) {
-                            if (!w.closed && w.handle != null) { restore(w); u.SetForegroundWindow(w.handle); }
+                            if (!w.closed && w.handle != null) setHidden(w, hide);
                         }
                     }
                     Thread.sleep(100);
                 }
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-            finally { u.UnregisterHotKey(null, 0x4d59); restoreKey = ""; }
+            finally { u.UnregisterHotKey(null, 0x4d59); toggleKey = ""; }
         }, "momoyu-window-hotkey"); hotkeys.setDaemon(true); hotkeys.start();
     }
     @PreDestroy public void shutdown() {
@@ -252,10 +292,16 @@ public class DesktopWindowService {
     }
     public record Progress(String id, int episode, double time, double rate, boolean resume) {}
     public record PlaybackStatus(int readyState, int networkState, double time, String error) {}
+    public interface WindowProperties extends StdCallLibrary {
+        WindowProperties INSTANCE = Native.load("user32", WindowProperties.class);
+        boolean SetPropW(HWND window, WString key, Pointer value);
+        Pointer GetPropW(HWND window, WString key);
+        Pointer RemovePropW(HWND window, WString key);
+    }
     private static class Window {
         final String token; final long created = System.currentTimeMillis();
-        volatile HWND handle; volatile boolean closed, clickThrough, autoHide;
-        volatile int opacity = 55; volatile boolean topmost = true;
+        volatile HWND handle; volatile boolean closed, clickThrough, autoHide, hidden;
+        volatile int opacity = 50; volatile boolean topmost = true;
         volatile String error = ""; volatile Progress progress;
         volatile PlaybackStatus playbackStatus;
         Window(String token) { this.token = token; }

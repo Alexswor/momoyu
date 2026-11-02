@@ -10,10 +10,12 @@ export const desktopRequest = async (path = '', body, keepalive = false) => {
   return result.data;
 };
 const isAvailable = ref(false);
-const windowState = ref({ opacity: 100, topmost: false, clickThrough: false, autoHide: false, ready: false, restoreKey: '' });
+const windowState = ref({ opacity: 50, topmost: false, clickThrough: false, autoHide: false, ready: false, toggleKey: '' });
 const refreshWindow = async () => {
   if (nativeToken) {
     windowState.value = await desktopRequest(`/windows/${nativeToken}`);
+    const title = windowState.value.identityReady ? '摸摸鱼' : `摸摸鱼 [摸摸鱼-${nativeToken}]`;
+    if (document.title !== title) document.title = title;
     const video = document.querySelector('video');
     await desktopRequest(`/windows/${nativeToken}/status`, {
       readyState: video?.readyState ?? -1, networkState: video?.networkState ?? 0, time: video?.currentTime || 0,

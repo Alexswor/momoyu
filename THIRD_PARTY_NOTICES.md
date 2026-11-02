@@ -14,6 +14,8 @@ Vue、Vue Router、Element Plus、Anime.js、HLS.js 为 npm 依赖，版本固�
 
 挂件菜单与观看记录新增的四张专用动作素材位于 `frontend/public/whale/ui/`，仍以同一大肥鱼参考形象通过内置图像工具制作：钓电影票、举箭头跃起、抱尾收起和坐胶片卷看时钟。前三张仅供挂件菜单对应按钮使用，最后一张专用于观看记录。
 
+半透明小窗入口图片 `frontend/public/whale/ui/desktop-eating.png` 由用户提供，使用内置图像工具去除背景并保留角色形象，在界面中缩放显示。
+
 ## Windows 窗口控制
 
 JNA / JNA Platform 5.17.0，采用其 Apache License 2.0 授权选项：[项目与许可证](https://github.com/java-native-access/jna)。窗口级透明度使用 Windows `SetLayeredWindowAttributes`、`WS_EX_LAYERED`；置顶使用 `SetWindowPos`。对用户提供的“虚影”程序仅作本地静态分析，未分发其程序或恢复的字节码，也未复用其登录、会员或网络服务代码。

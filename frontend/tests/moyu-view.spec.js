@@ -32,7 +32,8 @@ test.beforeEach(async ({ context }) => {
   await context.route('http://127.0.0.1:5173/api/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     let data = dramas;
-    if (path === '/api/catalog') data = { items: dramas, page: 1, pageCount: 1, total: dramas.length };
+    if (path === '/api/desktop') data = { available: true };
+    else if (path === '/api/catalog') data = { items: dramas, page: 1, pageCount: 1, total: dramas.length };
     else if (/\/play$/.test(path)) data = { dramaId: path.split('/')[3], episode: Number(path.split('/')[5]), urls: ['/moyu-test-video.mp4'], labels: ['原画'] };
     else if (/\/episodes$/.test(path)) data = [1, 2].map((number) => ({ number, title: `第${number}集 海风里的鲸鱼`, duration: 5 }));
     else if (/\/dramas\/[^/]+$/.test(path)) data = dramas.find((row) => row.id === path.split('/').pop());
@@ -47,13 +48,14 @@ const readyVideo = async (page) => {
 
 const desktopToken = '01234567-1234-1234-1234-0123456789ab';
 test('半透明调节控制Windows窗口，页面内容保持清晰且Esc可恢复', async ({ page }) => {
-  let state = { token: desktopToken, ready: true, opacity: 55, topmost: true, clickThrough: false, autoHide: false, restoreKey: 'Alt+B' };
+  let state = { token: desktopToken, ready: true, identityReady: true, opacity: 50, topmost: true, clickThrough: false, autoHide: false, toggleKey: 'Alt+Z' };
   await page.route('**/api/desktop/windows/**', async (route) => {
     if (route.request().method() === 'POST') state = { ...state, ...route.request().postDataJSON() };
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ code: 200, data: state }) });
   });
   await page.goto(`/?desktopWindow=${desktopToken}`);
-  await expect(page.getByRole('slider', { name: '窗口不透明度' })).toHaveValue('55');
+  await expect(page).toHaveTitle('摸摸鱼');
+  await expect(page.getByRole('slider', { name: '窗口不透明度' })).toHaveValue('50');
   await page.getByRole('slider', { name: '窗口不透明度' }).fill('35');
   await expect.poll(() => state.opacity).toBe(35);
   expect(await page.locator('main').evaluate(el => getComputedStyle(el).filter)).toBe('none');
@@ -163,4 +165,51 @@ test('网页启动半透明小窗携带集数和进度，关闭后回传新进�
   state = { ...state, closed: true, progress: { id: 'bf-9001', episode: 1, time: 2.5, rate: 1.5, resume: false } };
   await expect.poll(() => page.locator('video').evaluate(video => video.currentTime)).toBeGreaterThan(2.3);
   await expect(page.locator('.detached-overlay')).toHaveCount(0);
+});
+
+test('半透明入口使用提供的大肥鱼图片，挂件拖动不会误触菜单且会记住位置', async ({ page }) => {
+  await page.goto('/');
+  const launcher = page.getByRole('button', { name: '半透明小窗', exact: true });
+  await expect(launcher.locator('img')).toHaveAttribute('src', '/whale/ui/desktop-eating.png');
+  await expect.poll(() => launcher.locator('img').evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+  const avatar = page.locator('.whale-toggle');
+  const before = await avatar.boundingBox();
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(110, 180, { steps: 12 });
+  await page.mouse.up();
+  await expect(avatar).toHaveAttribute('aria-expanded', 'false');
+  await expect.poll(async () => (await avatar.boundingBox()).x).toBeLessThan(150);
+  const moved = await avatar.boundingBox();
+  expect(moved.x).toBeLessThan(150);
+  expect(moved.y).toBeLessThan(200);
+  await avatar.click();
+  await expect(avatar).toHaveAttribute('aria-expanded', 'true');
+  const menu = await page.locator('.whale-menu').boundingBox();
+  expect(menu.x).toBeGreaterThanOrEqual(0);
+  expect(menu.y).toBeGreaterThanOrEqual(0);
+  await page.screenshot({ path: '../.runtime/overlay-v2-drag.png' });
+  await page.reload();
+  await expect.poll(async () => (await avatar.boundingBox()).x).toBeCloseTo(moved.x, 0);
+  await page.setViewportSize({ width: 320, height: 520 });
+  await avatar.focus();
+  for (let index = 0; index < 30; index++) await page.keyboard.press('ArrowRight');
+  const narrow = await avatar.boundingBox();
+  expect(narrow.x + narrow.width).toBeLessThanOrEqual(313);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('窄屏挂件支持触屏拖动', async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const avatar = page.locator('.whale-toggle');
+  const before = await avatar.boundingBox();
+  const session = await context.newCDPSession(page);
+  await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: before.x + before.width / 2, y: before.y + before.height / 2 }] });
+  await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 60, y: 200 }] });
+  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(async () => (await avatar.boundingBox()).x).toBeLessThan(100);
+  await expect(avatar).toHaveAttribute('aria-expanded', 'false');
+  await session.detach();
 });
