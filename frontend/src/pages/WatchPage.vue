@@ -1,24 +1,26 @@
 <template>
-  <div class="watch-page">
+  <div class="watch-page" :class="{ 'popup-player': isPopup }">
     <div v-if="isLoading" class="status-panel">正在加载剧集…</div>
     <div v-else-if="loadError" class="status-panel" role="alert"><p>{{ loadError }}</p><button class="secondary-button" @click="loadDrama">重新加载</button><RouterLink to="/">返回首页</RouterLink></div>
     <template v-else-if="drama">
-      <div class="watch-breadcrumb"><RouterLink to="/"><AppIcon name="back" />返回发现</RouterLink><span>/</span><span>{{ drama.title }}</span></div>
+      <div v-if="!isPopup" class="watch-breadcrumb"><RouterLink to="/"><AppIcon name="back" />返回发现</RouterLink><span>/</span><span>{{ drama.title }}</span></div>
+      <div class="view-toolbar"><span v-if="isPopup" class="popup-title">{{ drama.title }}</span><div class="view-actions"><button v-if="!isPopup" @click="openPlayerWindow"><UtilityIcon name="popup" />弹窗播放</button><button v-else @click="returnToPage"><UtilityIcon name="back" />回到网页</button><button v-if="supportsPiP && !nativeToken" :disabled="isResolving || !!playError" :aria-pressed="isPiP" title="画中画窗口" @click="togglePictureInPicture"><UtilityIcon name="pip" />{{ isPiP ? '退出画中画' : '画中画' }}</button><button v-if="isPopup && episodes.length > 1" :aria-expanded="isEpisodePanelOpen" aria-controls="popup-episodes" @click="isEpisodePanelOpen = !isEpisodePanelOpen"><UtilityIcon name="list" />选集</button></div></div>
       <div class="watch-layout">
         <section class="player-section" aria-label="视频播放">
           <div class="video-stage" :class="{ 'is-portrait': isPortrait }">
-            <video ref="videoElement" controls playsinline preload="metadata" :poster="drama.backdrop" @loadedmetadata="restoreProgress" @loadeddata="updateAspect" @resize="updateAspect" @timeupdate="handleTimeUpdate" @ended="handleEnded" @error="handleVideoError" @playing="handlePlaying" @waiting="handleWaiting" @pause="persistProgress"></video>
+            <video ref="videoElement" controls playsinline preload="metadata" :disablePictureInPicture.prop="!!nativeToken" :poster="drama.backdrop" @loadedmetadata="restoreProgress" @loadeddata="updateAspect" @resize="updateAspect" @timeupdate="handleTimeUpdate" @seeked="persistProgress" @ended="handleEnded" @error="handleVideoError" @playing="handlePlaying" @waiting="handleWaiting" @pause="persistProgress" @enterpictureinpicture="isPiP = true" @leavepictureinpicture="isPiP = false"></video>
             <div v-if="isResolving" class="video-overlay"><span class="loading-ring"></span><span>正在连接片源…</span></div>
             <div v-else-if="playError" class="video-overlay video-error" role="alert"><AppIcon name="film" /><p>{{ playError }}</p><button class="primary-button" @click="retryPlayback">重新播放</button></div>
             <div v-else-if="isBuffering" class="buffering"><span class="loading-ring"></span></div>
+            <div v-if="isPlaybackDetached" class="video-overlay detached-overlay"><UtilityIcon name="popup" /><span>正在弹窗播放</span><button class="secondary-button" @click="recallPlayer">回到网页播放</button></div>
           </div>
-          <div class="player-toolbar"><span class="playing-label"><i></i>{{ currentEpisode?.title || drama.title }}</span><div class="toolbar-actions"><ElSelect :suffix-icon="WhaleCaret" v-model="sourceIndex" aria-label="播放画质" :disabled="playbackUrls.length < 2" class="quality-select" :teleported="false"><ElOption v-for="(url, index) in playbackUrls" :key="url" :label="playbackLabels[index] || '原画'" :value="index" /></ElSelect><ElSelect :suffix-icon="WhaleCaret" v-model="playbackRate" aria-label="播放速度" class="speed-select" :teleported="false"><ElOption v-for="rate in [0.75, 1, 1.25, 1.5, 2]" :key="rate" :label="`${rate}倍速`" :value="rate" /></ElSelect><button :disabled="!hasNextEpisode" @click="goToEpisode(episodeNumber + 1)"><AppIcon name="next" /><span>下一集</span></button></div></div>
-          <div class="drama-info"><div class="drama-title-line"><h1>{{ drama.title }}</h1><button class="secondary-button" :aria-pressed="savedIds.includes(drama.id)" @click="toggleSaved(drama.id)"><AppIcon :name="savedIds.includes(drama.id) ? 'check' : 'plus'" />{{ savedIds.includes(drama.id) ? '已加入片单' : '加入片单' }}</button></div><div class="drama-meta"><span v-if="drama.year">{{ drama.year }}</span><i></i><span>{{ drama.category }}</span><i></i><span>{{ drama.compilation ? (drama.originalEpisodeCount > 1 ? `全集版 · ${drama.originalEpisodeCount}集` : '全集版') : drama.status }}</span><i></i><span>{{ drama.duration ? `${Math.ceil(drama.duration / 60)}分钟` : drama.sourceName }}</span></div><p v-if="drama.synopsis" class="synopsis">{{ drama.synopsis }}</p><div class="detail-tags"><span v-for="tag in drama.tags" :key="tag">{{ tag }}</span></div></div>
-          <details class="credits"><summary>片源与授权</summary><p>{{ drama.credit }}</p><p><a :href="licenseUrl" target="_blank" rel="noreferrer">{{ drama.licenseName }}</a></p><a :href="drama.sourcePage" target="_blank" rel="noreferrer">查看片源<AppIcon name="arrow" /></a></details>
+          <div class="player-toolbar"><span class="playing-label"><i></i>{{ currentEpisode?.title || drama.title }}</span><div class="toolbar-actions"><ElSelect :suffix-icon="WhaleCaret" v-model="sourceIndex" aria-label="播放画质" :disabled="playbackUrls.length < 2" class="quality-select" :teleported="false"><ElOption v-for="(url, index) in playbackUrls" :key="url" :label="playbackLabels[index] || '原画'" :value="index" /></ElSelect><ElSelect :suffix-icon="WhaleCaret" v-model="playbackRate" aria-label="播放速度" class="speed-select" :teleported="false"><ElOption v-for="rate in [0.75, 1, 1.25, 1.5, 2]" :key="rate" :label="`${rate}倍速`" :value="rate" /></ElSelect><button aria-label="下一集" :disabled="!hasNextEpisode" @click="goToEpisode(episodeNumber + 1)"><AppIcon name="next" /><span>下一集</span></button></div></div>
+          <div v-if="!isPopup" class="drama-info"><div class="drama-title-line"><h1>{{ drama.title }}</h1><button class="secondary-button" :aria-pressed="savedIds.includes(drama.id)" @click="toggleSaved(drama.id)"><AppIcon :name="savedIds.includes(drama.id) ? 'check' : 'plus'" />{{ savedIds.includes(drama.id) ? '已加入片单' : '加入片单' }}</button></div><div class="drama-meta"><span v-if="drama.year">{{ drama.year }}</span><i></i><span>{{ drama.category }}</span><i></i><span>{{ drama.compilation ? (drama.originalEpisodeCount > 1 ? `全集版 · ${drama.originalEpisodeCount}集` : '全集版') : drama.status }}</span><i></i><span>{{ drama.duration ? `${Math.ceil(drama.duration / 60)}分钟` : drama.sourceName }}</span></div><p v-if="drama.synopsis" class="synopsis">{{ drama.synopsis }}</p><div class="detail-tags"><span v-for="tag in drama.tags" :key="tag">{{ tag }}</span></div></div>
+          <details v-if="!isPopup" class="credits"><summary>片源与授权</summary><p>{{ drama.credit }}</p><p><a :href="licenseUrl" target="_blank" rel="noreferrer">{{ drama.licenseName }}</a></p><a :href="drama.sourcePage" target="_blank" rel="noreferrer">查看片源<AppIcon name="arrow" /></a></details>
         </section>
-        <aside class="episodes-panel" aria-label="选集"><div class="episodes-heading"><h2>{{ drama.compilation ? '全集' : '选集' }}</h2><span>{{ drama.compilation ? '合集播放' : `${episodes.length}集` }}</span></div><div v-if="episodes.length > 1" class="autoplay-row"><span>自动连播</span><ElSwitch v-model="isAutoNext" aria-label="自动连播" /></div><div class="episode-list"><button v-for="episode in episodes" :key="episode.number" :class="{ active: episode.number === episodeNumber }" :aria-pressed="episode.number === episodeNumber" @click="goToEpisode(episode.number)"><span class="episode-number">{{ String(episode.number).padStart(2, '0') }}</span><span class="episode-name">{{ episode.title }}</span><span v-if="episode.number === episodeNumber" class="sound-bars"><i></i><i></i><i></i></span><span v-else-if="episode.duration" class="episode-duration">{{ Math.ceil(episode.duration / 60) }}分钟</span></button></div><p v-if="isFinished" class="finished-label">本片已看完</p><div class="aside-recommendations"><h2>接着发现</h2><RouterLink v-for="item in recommendations.slice(0, 3)" :key="item.id" :to="`/watch/${item.id}`"><img @error="handleImageError" :src="item.backdrop" :alt="item.title" loading="lazy" /><div><h3>{{ item.title }}</h3><span>{{ item.category }} · {{ item.compilation ? '全集版' : item.status }}</span></div><AppIcon name="chevron" /></RouterLink></div></aside>
+        <aside v-if="!isPopup || isEpisodePanelOpen" id="popup-episodes" class="episodes-panel" aria-label="选集"><div class="episodes-heading"><h2>{{ drama.compilation ? '全集' : '选集' }}</h2><span>{{ drama.compilation ? '合集播放' : `${episodes.length}集` }}</span></div><div v-if="episodes.length > 1" class="autoplay-row"><span>自动连播</span><ElSwitch v-model="isAutoNext" aria-label="自动连播" /></div><div class="episode-list"><button v-for="episode in episodes" :key="episode.number" :class="{ active: episode.number === episodeNumber }" :aria-pressed="episode.number === episodeNumber" @click="goToEpisode(episode.number)"><span class="episode-number">{{ String(episode.number).padStart(2, '0') }}</span><span class="episode-name">{{ episode.title }}</span><span v-if="episode.number === episodeNumber" class="sound-bars"><i></i><i></i><i></i></span><span v-else-if="episode.duration" class="episode-duration">{{ Math.ceil(episode.duration / 60) }}分钟</span></button></div><p v-if="isFinished" class="finished-label">本片已看完</p><div class="aside-recommendations"><h2>接着发现</h2><RouterLink v-for="item in recommendations.slice(0, 3)" :key="item.id" :to="`/watch/${item.id}`"><img @error="handleImageError" :src="item.backdrop" :alt="item.title" loading="lazy" /><div><h3>{{ item.title }}</h3><span>{{ item.category }} · {{ item.compilation ? '全集版' : item.status }}</span></div><AppIcon name="chevron" /></RouterLink></div></aside>
       </div>
-      <section v-if="recommendations.length" class="more-section"><h2>你可能还想看</h2><div class="recommendation-grid"><DramaCard v-for="item in recommendations.slice(0, 6)" :key="item.id" :drama="item" /></div></section>
+      <section v-if="!isPopup && recommendations.length" class="more-section"><h2>你可能还想看</h2><div class="recommendation-grid"><DramaCard v-for="item in recommendations.slice(0, 6)" :key="item.id" :drama="item" /></div></section>
     </template>
   </div>
 </template>
@@ -34,12 +36,16 @@ import 'element-plus/theme-chalk/el-popper.css';
 import 'element-plus/theme-chalk/el-select-dropdown.css';
 import 'element-plus/theme-chalk/el-scrollbar.css';
 import Hls from 'hls.js';
+import { ElMessage } from 'element-plus/es/components/message/index';
 import AppIcon from '../components/AppIcon.vue';
+import UtilityIcon from '../components/UtilityIcon.vue';
 import WhaleCaret from '../components/WhaleCaret.vue';
 import { handleImageError } from '../utils/image-fallback';
 import DramaCard from '../components/DramaCard.vue';
 import { getDrama, getDramas, getEpisodes, getPlayback } from '../api/dramas';
 import { useCollection } from '../composables/use-collection';
+import { nativeToken, desktopRequest } from '../composables/use-display-mode';
+import { usePlayerWindow } from '../composables/use-player-window';
 
 const route = useRoute();
 const router = useRouter();
@@ -55,10 +61,14 @@ const playError = ref('');
 const isBuffering = ref(false);
 const isFinished = ref(false);
 const isPortrait = ref(false);
+const isPlaybackDetached = ref(false);
 const playbackUrls = ref([]);
 const playbackLabels = ref([]);
 const sourceIndex = ref(0);
-const playbackRate = ref(1);
+const playbackRate = ref([0.75, 1, 1.25, 1.5, 2].includes(Number(route.query.rate)) ? Number(route.query.rate) : 1);
+const isPiP = ref(false);
+const isEpisodePanelOpen = ref(false);
+const supportsPiP = Boolean(document.pictureInPictureEnabled && HTMLVideoElement.prototype.requestPictureInPicture);
 const isAutoNext = ref(true);
 const episodeNumber = computed(() => Number(route.params.episode || 1));
 const currentEpisode = computed(() => episodes.value.find((episode) => episode.number === episodeNumber.value));
@@ -88,9 +98,17 @@ const destroyPlayer = () => {
 };
 const persistProgress = () => {
   const video = videoElement.value;
-  if (video && drama.value && Number.isFinite(video.duration) && video.currentTime > 0 && !isChangingSource) {
+  if (video && drama.value && Number.isFinite(video.duration) && video.currentTime > 0 && !isChangingSource && !isPlaybackDetached.value) {
     saveProgress(playingId || drama.value.id, playingEpisode, video.currentTime, video.duration);
+    if (nativeToken) desktopRequest(`/windows/${nativeToken}/progress`, { id: playingId || drama.value.id, episode: playingEpisode, time: video.currentTime, rate: playbackRate.value, resume: false }, true).catch(() => {});
   }
+};
+const { isPopup, openPlayerWindow, returnToPage, recallPlayer } = usePlayerWindow({ route, router, videoElement, drama, episodeNumber, playbackRate, isPortrait, isPlaybackDetached, history, persistProgress });
+const togglePictureInPicture = async () => {
+  try {
+    if (document.pictureInPictureElement) await document.exitPictureInPicture();
+    else await videoElement.value?.requestPictureInPicture();
+  } catch { ElMessage.info('暂时无法开启画中画，可使用弹窗播放'); }
 };
 const handleTimeUpdate = () => {
   if (Date.now() - lastSavedAt < 3000) return;
@@ -115,7 +133,12 @@ const attachSource = async () => {
       isSourcePortrait = data.levels.some((level) => level.height > level.width);
       updateAspect();
     });
-    hls.on(Hls.Events.ERROR, (_event, data) => { if (data.fatal) handleVideoError(); });
+    hls.on(Hls.Events.ERROR, (_event, data) => {
+      if (data.fatal) {
+        video.dataset.playerError = `${data.type}: ${data.details}; ${data.response?.code || ''} ${data.error?.message || ''}`.slice(0, 400);
+        handleVideoError();
+      }
+    });
   } else { video.src = url; video.load(); }
 };
 const restoreProgress = () => {
@@ -176,6 +199,19 @@ const loadPlayback = async (autoPlay = true) => {
     playingId = data.dramaId;
     playingEpisode = data.episode;
     sourceIndex.value = 0;
+    if (route.query.t !== undefined || route.query.paused !== undefined || route.query.rate !== undefined || route.query.blur !== undefined) {
+      const time = Number(route.query.t);
+      pendingSeek = Number.isFinite(time) && time >= 0 ? time : null;
+      shouldAutoPlay = autoPlay && route.query.paused !== '1';
+      const query = { ...route.query };
+      delete query.t;
+      delete query.paused;
+      delete query.rate;
+      delete query.blur;
+      delete query.soft;
+      await router.replace({ path: route.path, query });
+      if (version !== requestVersion) return;
+    }
     await nextTick();
     await attachSource();
   } catch (failure) { if (version === requestVersion) playError.value = failure.message; }
@@ -185,7 +221,7 @@ const retryPlayback = () => loadPlayback();
 const goToEpisode = (number) => {
   if (number === episodeNumber.value) return;
   persistProgress();
-  router.push(`/watch/${drama.value.id}/${number}`);
+  router.push({ path: `/watch/${drama.value.id}/${number}`, query: isPopup.value ? { popup: '1' } : {} });
 };
 const handleEnded = () => {
   persistProgress();
@@ -230,6 +266,11 @@ watch(() => route.params.episode, () => { if (!isLoading.value && drama.value?.i
 onBeforeUnmount(() => { persistProgress(); requestVersion += 1; isChangingSource = true; destroyPlayer(); });
 </script>
 <style scoped>
+.view-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; padding: 0 0 .8rem; min-width: 0; }
+.view-actions { display: flex; flex-wrap: wrap; gap: .5rem; flex-shrink: 0; }
+.view-actions button { display: inline-flex; align-items: center; gap: .45rem; min-height: 2.5rem; border: 1px solid var(--line); border-radius: 2rem; padding: .5rem .85rem; font-size: .75rem; color: var(--muted); }
+.view-actions button:hover:not(:disabled), .view-actions button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: #d2f86b08; }
+.popup-title { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .8rem; color: var(--muted); }
 .watch-page { width: 91.2%; max-width: 1600px; margin: 0 auto; }
 .watch-breadcrumb { display: flex; gap: 1rem; align-items: center; padding: 1.6rem 0; color: var(--subtle); font-size: .75rem; }
 .watch-breadcrumb a { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
@@ -238,9 +279,9 @@ onBeforeUnmount(() => { persistProgress(); requestVersion += 1; isChangingSource
 .watch-layout { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 1.5rem; align-items: start; }
 .player-section { min-width: 0; }
 .video-stage { aspect-ratio: 16 / 9; position: relative; background: #000; border-radius: .5rem .5rem 0 0; overflow: hidden; }
-.video-stage video { width: 100%; height: 100%; object-fit: contain; }
+.video-stage video { display: block; width: 100%; height: 100%; object-fit: contain; }
 @media (max-width: 800px) { .video-stage.is-portrait { aspect-ratio: 9 / 16; max-height: 72vh; } .drama-title-line { align-items: flex-start; } .drama-title-line button { flex-shrink: 0; } }
-@media (max-width: 800px) { .video-stage.is-portrait video { object-fit: cover; } }
+@media (max-width: 800px) { .video-stage.is-portrait video { object-fit: contain; } }
 .video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; background: #080b08e8; color: var(--muted); font-size: .85rem; }
 .video-error > .whale-icon { width: 4rem; height: 4rem; color: var(--subtle); }
 .video-error p { margin: .5rem 1rem; text-align: center; }
@@ -301,4 +342,27 @@ onBeforeUnmount(() => { persistProgress(); requestVersion += 1; isChangingSource
 .recommendation-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.3rem; }
 @media (max-width: 1100px) { .watch-layout { grid-template-columns: minmax(0, 1fr) 17rem; gap: 1rem; } .episodes-panel { padding: 1rem; } .recommendation-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 800px) { .watch-layout { grid-template-columns: 1fr; } .episodes-panel { margin-top: .5rem; } .aside-recommendations { display: none; } .episode-list { display: grid; grid-template-columns: repeat(2, 1fr); } .player-toolbar { padding: .4rem .6rem; } .playing-label { max-width: 45%; font-size: .65rem; } .toolbar-actions { gap: .1rem; } .toolbar-actions button span { display: none; } .quality-select { width: 4.3rem; } .speed-select { width: 4.7rem; } .drama-title-line h1 { font-size: 1.6rem; } .drama-title-line button { font-size: .65rem; } .recommendation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 1rem; } .watch-page { width: 90%; } }
+.watch-breadcrumb > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-breadcrumb a { flex-shrink: 0; }
+.toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+.playing-label { min-width: 0; overflow-wrap: anywhere; }
+.playing-label i { flex-shrink: 0; }
+.drama-title-line h1, .episode-name, .aside-recommendations h3 { min-width: 0; overflow-wrap: anywhere; }
+.drama-title-line button { flex-shrink: 0; }
+.detail-tags { flex-wrap: wrap; }
+@media (min-width: 801px) and (max-width: 1000px) { .watch-layout { grid-template-columns: 1fr; } .episode-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); } .aside-recommendations { display: none; } }
+@media (max-width: 600px) { .player-toolbar { flex-wrap: wrap; align-items: flex-start; } .player-toolbar .playing-label { max-width: 100%; width: 100%; } .toolbar-actions { width: 100%; justify-content: space-between; } .drama-title-line { flex-wrap: wrap; } .drama-title-line h1 { font-size: 1.3rem; } .episode-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .episode-list button { min-width: 0; } }
+.popup-player { width: 100%; max-width: none; padding: .65rem; }
+.popup-player .view-toolbar { padding-bottom: .6rem; }
+.popup-player .view-actions { gap: .3rem; }
+.popup-player .view-actions button { font-size: .7rem; padding: .4rem .65rem; min-height: 2.2rem; }
+.popup-player .watch-layout { grid-template-columns: minmax(0, 1fr); gap: .7rem; }
+.popup-player .video-stage { max-height: calc(100dvh - 12rem); min-height: 8rem; }
+.popup-player .video-stage.is-portrait { aspect-ratio: 9 / 16; height: calc(100dvh - 12rem); width: 100%; }
+.popup-player .episodes-panel { margin: 0; padding: .8rem; }
+.popup-player .episodes-heading h2 { font-size: .8rem; }
+.popup-player .episode-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); max-height: 8rem; margin-top: .5rem; }
+.popup-player .episode-list button { padding: .6rem; }
+.popup-player .aside-recommendations { display: none; }
+@media (max-width: 460px) { .popup-player .view-toolbar { flex-wrap: wrap; gap: .6rem; } .popup-title { flex-basis: 100%; } .popup-player .view-actions { width: 100%; justify-content: space-between; } .popup-player .video-stage { max-height: calc(100dvh - 14rem); } .popup-player .video-stage.is-portrait { height: calc(100dvh - 14rem); } }
 </style>

@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
 import { normalizeSource } from './constants/catalog-sources';
+import { nativeToken } from './composables/use-display-mode';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,6 +18,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
+  if (nativeToken && to.query.desktopWindow !== nativeToken) return { path: to.path, query: { ...to.query, desktopWindow: nativeToken }, hash: to.hash, replace: true };
   if (to.query.source !== undefined && normalizeSource(to.query.source) !== to.query.source) {
     return { path: to.path, query: { ...to.query, source: normalizeSource(to.query.source) }, hash: to.hash, replace: true };
   }

@@ -13,3 +13,4 @@ data/
 __pycache__/
 *.py[cod]
 /reports/catalog-audit-*/
+/虚影/

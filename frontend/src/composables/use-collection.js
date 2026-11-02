@@ -10,6 +10,13 @@ const readStored = (key) => {
 const savedIds = ref(readStored('pianke-saved').filter((id) => typeof id === 'string'));
 const history = ref(readStored('pianke-history').filter((entry) => entry && typeof entry.id === 'string'));
 
+// The popup shares storage with the main page; update both views without reloading.
+window.addEventListener('storage', (event) => {
+  if (event.storageArea !== localStorage) return;
+  if (event.key === 'pianke-saved' || event.key === null) savedIds.value = readStored('pianke-saved').filter((id) => typeof id === 'string');
+  if (event.key === 'pianke-history' || event.key === null) history.value = readStored('pianke-history').filter((entry) => entry && typeof entry.id === 'string');
+});
+
 const persist = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Browsing remains available if storage is full. */ }
 };

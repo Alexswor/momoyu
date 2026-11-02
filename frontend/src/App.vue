@@ -1,6 +1,7 @@
 <template>
+  <div class="app-surface" :class="{ 'is-popup': isPopup }">
   <a class="skip-link" href="#main-content">跳至内容</a>
-  <header class="site-header">
+  <header v-if="!isPopup" class="site-header blur-region">
     <RouterLink class="brand" to="/" aria-label="摸摸鱼首页"><img src="/whale/dafeiyu-chibi.png" alt="Q版鲸鱼娘" /><span>摸摸鱼</span></RouterLink>
     <nav class="main-nav" aria-label="主导航">
       <RouterLink to="/" exact-active-class="active"><AppIcon name="sparkle" />发现</RouterLink>
@@ -14,18 +15,20 @@
     </form>
     <RouterLink class="history-link" to="/history" aria-label="观看记录"><WatchHistoryIcon /><span class="history-label">观看记录</span></RouterLink>
   </header>
-  <main id="main-content"><RouterView /></main>
-  <WhaleCompanion />
-  <footer class="site-footer"><RouterLink class="footer-brand" to="/">摸摸鱼</RouterLink><span>© {{ new Date().getFullYear() }} 摸摸鱼</span><button @click="showCredits = true">片源与授权</button><a href="https://github.com/juliangarnier/anime" target="_blank" rel="noreferrer">开源致谢<UtilityIcon name="external" /></a></footer>
+  <main id="main-content" class="blur-region"><RouterView /></main>
+  <WhaleCompanion v-if="!isPopup" />
+  <footer v-if="!isPopup" class="site-footer blur-region"><RouterLink class="footer-brand" to="/">摸摸鱼</RouterLink><span>© {{ new Date().getFullYear() }} 摸摸鱼</span><button @click="showCredits = true">片源与授权</button><a href="https://github.com/juliangarnier/anime" target="_blank" rel="noreferrer">开源致谢<UtilityIcon name="external" /></a></footer>
   <ElDialog :close-icon="WhaleClose" v-model="showCredits" title="片源与授权" width="min(38rem, 92vw)" class="credits-dialog">
     <p>漫剧目录接入暴风与360的公开采集接口。内容、集数与更新状态以片源返回为准，全集合并版会单独标记。</p>
     <p>播放页保留当前片源及查询链接。第三方目录可访问并不代表已获得内容的发行授权，片源失效时可在目录页切换来源。</p>
     <p>开放短片保留其原作者与许可声明。</p>
     <p><a href="https://treapgogo.github.io/deepseek-whale-girl/" target="_blank" rel="noreferrer">鲸鱼娘素材来源<AppIcon name="arrow" /></a></p>
   </ElDialog>
+  </div>
+  <DisplayControls />
 </template>
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElDialog } from 'element-plus/es/components/dialog/index';
 import 'element-plus/theme-chalk/base.css';
@@ -37,11 +40,15 @@ import UtilityIcon from './components/UtilityIcon.vue';
 import WatchHistoryIcon from './components/WatchHistoryIcon.vue';
 import WhaleCompanion from './components/WhaleCompanion.vue';
 import WhaleClose from './components/WhaleClose.vue';
+import DisplayControls from './components/DesktopDisplayControls.vue';
+import { nativeToken } from './composables/use-display-mode';
 
 const keyword = ref('');
 const route = useRoute();
 const router = useRouter();
 const showCredits = ref(false);
+const isPopup = computed(() => route.path.startsWith('/watch/') && route.query.popup === '1');
+if (nativeToken) document.title = `摸摸鱼 [摸摸鱼-${nativeToken}]`;
 watch(() => route.query.q, (value) => { keyword.value = String(value || ''); }, { immediate: true });
 const handleSearch = () => router.push({ path: '/library', query: { source: route.query.source, q: keyword.value.trim() || undefined } });
 const handleShortcut = (event) => {
@@ -54,6 +61,8 @@ onMounted(() => document.addEventListener('keydown', handleShortcut));
 onUnmounted(() => document.removeEventListener('keydown', handleShortcut));
 </script>
 <style>
+.app-surface { min-width: 0; padding-bottom: 4.5rem; }
+.app-surface.is-popup { padding-bottom: 4.5rem; }
 @font-face { font-family: 'Chill Round'; src: url('/fonts/ChillRoundF.ttf') format('truetype'); font-weight: 400 700; font-style: normal; font-display: swap; }
 :root { color-scheme: dark; --bg: #10110f; --panel: #1b1d18; --text: #f4f5ed; --muted: #a3a69a; --subtle: #777b6e; --accent: #d2f86b; --line: #ffffff12; --danger: #ff9b87; --radius: .85rem; --el-color-primary: var(--accent); --el-text-color-primary: var(--text); --el-text-color-regular: var(--muted); --el-bg-color: var(--panel); --el-bg-color-overlay: var(--panel); --el-border-color-lighter: var(--line); --el-fill-color-blank: var(--panel); font-family: 'Chill Round', 'YouYuan', '幼圆', 'PingFang SC', sans-serif; font-synthesis: none; }
 * { box-sizing: border-box; }
@@ -110,7 +119,25 @@ button, a { transition: color .2s, background .2s, border-color .2s, opacity .2s
 .credits-dialog p { line-height: 1.9; }
 .credits-dialog a { color: var(--accent); display: inline-flex; gap: .5rem; align-items: center; }
 @media (min-width: 1700px) { .site-header, .site-footer { padding-left: max(4.4%, calc((100vw - 1600px) / 2)); padding-right: max(4.4%, calc((100vw - 1600px) / 2)); } }
-@media (max-width: 1000px) { .site-header { gap: 2rem; padding: 0 4%; height: 5.2rem; } .main-nav { gap: 1.5rem; } .search-form { width: 13rem; } .history-link .history-label { display: none; } }
-@media (max-width: 700px) { .site-header { height: 7.9rem; flex-wrap: wrap; gap: 0; padding: 1rem 5% .8rem; align-content: space-between; } .brand > span { font-size: 1.4rem; } .brand img { width: 1.7rem; height: 1.7rem; } .main-nav { order: 3; width: 100%; height: 2rem; justify-content: center; gap: 2.5rem; } .main-nav a { font-size: .83rem; gap: .3rem; } .main-nav .whale-icon { width: 1.7rem; height: 1.7rem; } .main-nav a.active::after { bottom: -.5rem; } .search-form { width: 45%; height: 2.2rem; } .search-form kbd { display: none; } .history-link { margin-left: 1rem; } .site-footer { flex-wrap: wrap; gap: 1rem; padding: 1.5rem 5%; } .footer-brand { width: 40%; } }
+@media (max-width: 1200px) and (min-width: 701px) { .site-header { gap: 1.2rem; padding: 0 3%; height: 5.2rem; } .brand > span { font-size: 1.3rem; } .main-nav { gap: 1rem; } .main-nav a { font-size: .8rem; } .main-nav .whale-icon { width: 1.6rem; height: 1.6rem; } .search-form { width: clamp(8rem, 20vw, 13rem); min-width: 0; } .history-link { margin-left: 0; } .history-link .history-label { display: none; } }
+@media (max-width: 700px) {
+  .site-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: 2rem 2rem; height: auto; min-height: 5.7rem; gap: .45rem .65rem; padding: .6rem 4%; align-content: center; align-items: center; }
+  .brand { grid-column: 1; grid-row: 1; gap: .3rem; }
+  .brand > span { font-size: 1.1rem; }
+  .brand img { width: 1.55rem; height: 1.55rem; }
+  .search-form { grid-column: 2; grid-row: 1; width: 100%; min-width: 0; height: 2rem; margin: 0; padding: 0 .55rem; gap: .3rem; }
+  .search-submit .whale-icon { width: 1.5rem; height: 1.5rem; }
+  .search-form input { font-size: .68rem; }
+  .search-form kbd, .history-link .history-label { display: none; }
+  .history-link { grid-column: 3; grid-row: 1; margin: 0; width: 1.75rem; height: 2rem; justify-content: center; }
+  .history-link .watch-history-icon { width: 1.65rem; height: 1.65rem; }
+  .main-nav { grid-column: 1 / -1; grid-row: 2; width: 100%; height: 2rem; justify-content: space-around; align-self: auto; gap: .6rem; }
+  .main-nav a { font-size: .72rem; gap: .25rem; }
+  .main-nav .whale-icon { width: 1.5rem; height: 1.5rem; }
+  .main-nav a.active::after { bottom: -.2rem; width: 1rem; height: .15rem; }
+  .site-footer { flex-wrap: wrap; gap: 1rem; padding: 1.5rem 5%; }
+  .footer-brand { width: 40%; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+@media (max-width: 380px) { .site-header { column-gap: .45rem; padding-inline: .75rem; } .brand > span { font-size: 1rem; } .brand img { width: 1.4rem; height: 1.4rem; } .main-nav { gap: .3rem; } .main-nav a { font-size: .68rem; } .main-nav .whale-icon { width: 1.4rem; height: 1.4rem; } }
 </style>

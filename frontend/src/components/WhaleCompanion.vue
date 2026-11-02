@@ -39,5 +39,5 @@ const chooseDrama = async () => {
 .whale-menu { position: absolute; bottom: 9rem; right: 0; border: 1px solid var(--line); background: #1b1d18f5; box-shadow: 0 10px 40px #0005; padding: .4rem; border-radius: .8rem; width: 10.8rem; backdrop-filter: blur(12px); }
 .whale-menu button { display: flex; gap: .7rem; align-items: center; width: 100%; padding: .5rem .65rem; font-size: .75rem; border-radius: .5rem; white-space: nowrap; }
 .whale-menu button:hover { color: var(--accent); background: #d2f86b0c; }
-@media (max-width: 700px) { .whale-companion { right: .65rem; bottom: .8rem; } .whale-toggle { width: 4.6rem; height: 5.8rem; } .whale-toggle img { width: 4.6rem; height: 5.8rem; } .whale-orbit { width: 4rem; height: .65rem; } .whale-menu { bottom: 6.2rem; } }
+@media (max-width: 700px) { .whale-companion { right: .45rem; bottom: 3.6rem; } .whale-toggle { width: 3.3rem; height: 4.2rem; } .whale-toggle img { width: 3.3rem; height: 4.2rem; } .whale-orbit { width: 2.9rem; height: .5rem; } .whale-spark { font-size: .7rem; } .whale-menu { bottom: 4.5rem; width: 10rem; } .whale-menu button { gap: .5rem; padding: .4rem .5rem; font-size: .7rem; } }
 </style>

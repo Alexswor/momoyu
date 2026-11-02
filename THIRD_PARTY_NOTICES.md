@@ -14,6 +14,10 @@ Vue、Vue Router、Element Plus、Anime.js、HLS.js 为 npm 依赖，版本固�
 
 挂件菜单与观看记录新增的四张专用动作素材位于 `frontend/public/whale/ui/`，仍以同一大肥鱼参考形象通过内置图像工具制作：钓电影票、举箭头跃起、抱尾收起和坐胶片卷看时钟。前三张仅供挂件菜单对应按钮使用，最后一张专用于观看记录。
 
+## Windows 窗口控制
+
+JNA / JNA Platform 5.17.0，采用其 Apache License 2.0 授权选项：[项目与许可证](https://github.com/java-native-access/jna)。窗口级透明度使用 Windows `SetLayeredWindowAttributes`、`WS_EX_LAYERED`；置顶使用 `SetWindowPos`。对用户提供的“虚影”程序仅作本地静态分析，未分发其程序或恢复的字节码，也未复用其登录、会员或网络服务代码。
+
 ## 圆润字体
 
 寒蝉全圆体 ChillRoundF，来自 [Warren2060/ChillRound](https://github.com/Warren2060/ChillRound)，使用 SIL Open Font License 1.1。原始许可证完整保留于 `frontend/public/fonts/OFL.txt`。字体本地托管，不依赖访客连接外部字体服务。

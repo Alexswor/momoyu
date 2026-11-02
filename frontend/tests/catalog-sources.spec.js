@@ -54,7 +54,7 @@ test('停用片源的旧播放链接给出提示，不删除本机片单和观�
     localStorage.setItem('pianke-saved', JSON.stringify(['wj-101']));
     localStorage.setItem('pianke-history', JSON.stringify([{ id: 'wj-101', episode: 1, time: 50, duration: 100 }]));
   });
-  page.on('request', (request) => { if (new URL(request.url()).pathname.startsWith('/api/')) calls.push(request.url()); });
+  page.on('request', (request) => { if (/^\/api\/(dramas|catalog)(\/|$)/.test(new URL(request.url()).pathname)) calls.push(request.url()); });
   await page.goto('/watch/wj-101');
   await expect(page.getByRole('alert')).toContainText('该片源已停用');
   expect(calls).toEqual([]);
